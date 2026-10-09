@@ -5,6 +5,7 @@
  */
 import { PAL } from '../config/constants';
 import { makeCanvas, ctxOf, flipH, type Sprite, type SpriteSet } from './pixel';
+import { packPlayerArt } from './pack';
 import { makeRng } from '../core/math';
 
 export type { Sprite, SpriteSet };
@@ -309,7 +310,7 @@ export type CharId = (typeof CHAR_DEFS)[number]['id'];
 export function buildPlayerArt(defIndex: number): PlayerArt {
   const o = CHAR_DEFS[defIndex].opts as HumanOpts;
   const runPoses: Pose[] = ['run0', 'run1', 'run2', 'run3'];
-  return {
+  const base: PlayerArt = {
     idle: mkSet([drawHumanoid(o, 'idle')]),
     run: runPoses.map((p) => mkSet([drawHumanoid(o, p)])),
     jump: mkSet([drawHumanoid(o, 'jump')]),
@@ -322,6 +323,9 @@ export function buildPlayerArt(defIndex: number): PlayerArt {
     gun: bakeGun(o.gun ?? PAL.steel, 11),
     portrait: bakePortrait(o, 3),
   };
+  // optional sprite-pack override (body poses only; gun + portrait stay procedural)
+  const pack = packPlayerArt(CHAR_DEFS[defIndex].id);
+  return pack ? { ...base, ...pack } : base;
 }
 
 /* ------------------------------------------------------------------ */

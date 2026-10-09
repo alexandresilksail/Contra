@@ -2,7 +2,8 @@ import { GRAVITY, PAL } from '../config/constants';
 import type { WorldCtx } from '../core/world';
 import { buildCapsule, buildHeart } from '../gfx/sprites';
 import type { WeaponId } from '../weapons/weapons';
-import { weaponDef } from '../weapons/weapons';
+import { weaponDef, WEAPON_ORDER } from '../weapons/weapons';
+import { packPickupIcon } from '../gfx/pack';
 import { moveAndCollide } from '../systems/collision';
 import { drawText } from '../gfx/font';
 
@@ -83,15 +84,20 @@ export function drawPickup(ctx: CanvasRenderingContext2D, p: Pickup, camX: numbe
   const x = Math.round(p.x - camX);
   const y = Math.round(p.y - camY);
   if (p.kind === 'weapon') {
-    const frames = capsule(p.weapon);
-    const spr = frames[Math.floor(p.animT * 8) % frames.length];
-    ctx.drawImage(spr, x, y);
-    drawText(ctx, weaponDef(p.weapon).letter, x + p.w / 2, y + 4, {
-      color: PAL.white,
-      shadow: PAL.black,
-      align: 'center',
-      scale: 1,
-    });
+    const icon = packPickupIcon(Math.max(0, WEAPON_ORDER.indexOf(p.weapon)));
+    if (icon) {
+      ctx.drawImage(icon, Math.round(x + (p.w - icon.width) / 2), Math.round(y + (p.h - icon.height) / 2));
+    } else {
+      const frames = capsule(p.weapon);
+      const spr = frames[Math.floor(p.animT * 8) % frames.length];
+      ctx.drawImage(spr, x, y);
+      drawText(ctx, weaponDef(p.weapon).letter, x + p.w / 2, y + 4, {
+        color: PAL.white,
+        shadow: PAL.black,
+        align: 'center',
+        scale: 1,
+      });
+    }
   } else if (p.kind === 'life') {
     const spr = heart();
     ctx.drawImage(spr, x + 3, y + 3);

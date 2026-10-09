@@ -11,10 +11,15 @@ if (!canvas) {
 canvas.width = VIEW_W;
 canvas.height = VIEW_H;
 
-const game = new Game(canvas);
-game.boot();
+import { loadPack } from './gfx/pack';
 
-if (boot) boot.classList.add('hide');
+const game = new Game(canvas);
+
+// Load the optional local sprite pack first (falls back to procedural art if absent).
+loadPack().then(() => {
+  game.boot();
+  if (boot) boot.classList.add('hide');
+});
 
 // expose for debugging / automated smoke tests
 (window as unknown as Record<string, unknown>).__IRONSTORM__ = game;
