@@ -1,0 +1,20 @@
+{
+  "name": "iron-storm",
+  "version": "1.0.0",
+  "private": true,
+  "description": "IRON STORM - an original 8/16-bit style run-and-gun shooter built with HTML5 Canvas 2D + TypeScript + Vite",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview --port 4173",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "~5.6.3",
+    "vite": "^5.4.11",
+    "vitest": "^2.1.8"
+  }
+}
