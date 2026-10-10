@@ -160,14 +160,71 @@ export function packHasPlayers(): boolean {
 /* slicing                                                             */
 /* ------------------------------------------------------------------ */
 
+/**
+ * Rip sheets draw each sprite on an opaque checkerboard panel. These are the
+ * panel shades per sheet; slice() keys them out so sprites get real alpha.
+ * Chosen well clear of sprite colors (nearest sprite color is ~80+ away).
+ */
+const KEY_COLORS: Record<string, [number, number, number][]> = {
+  players: [
+    [0, 47, 87],
+    [28, 102, 145],
+    [157, 28, 72],
+    [82, 14, 0],
+  ],
+  pickups: [[0, 91, 91]],
+};
+const KEY_DIST = 70; // Euclidean RGB distance threshold
+
+function keysFor(img: HTMLImageElement): [number, number, number][] {
+  for (const key of Object.keys(images) as (keyof typeof FILES)[]) {
+    if (images[key] === img) return KEY_COLORS[key] ?? [];
+  }
+  return [];
+}
+
+function chromaKey(canvas: HTMLCanvasElement, keys: [number, number, number][]): void {
+  if (!keys.length) return;
+  const g = ctxOf(canvas);
+  const w = canvas.width;
+  const h = canvas.height;
+  if (typeof g.getImageData !== 'function') return; // stub ctx (tests)
+  const lim = KEY_DIST * KEY_DIST;
+  const data = g.getImageData(0, 0, w, h);
+  const d = data.data;
+  for (let i = 0; i < d.length; i += 4) {
+    if (d[i + 3] === 0) continue;
+    const r = d[i];
+    const gr = d[i + 1];
+    const b = d[i + 2];
+    for (let k = 0; k < keys.length; k++) {
+      const dr = r - keys[k][0];
+      const dg = gr - keys[k][1];
+      const db = b - keys[k][2];
+      if (dr * dr + dg * dg + db * db < lim) {
+        d[i + 3] = 0;
+        break;
+      }
+    }
+  }
+  g.putImageData(data, 0, 0);
+}
+
 function slice(img: HTMLImageElement, cell: Cell, scale: number, flip = false): Sprite {
   const [sx, sy, sw, sh] = cell;
+  // 1) cut at source resolution and key out the panel background first,
+  //    so downscale blending never smears panel color into sprite edges
+  const raw = makeCanvas(sw, sh);
+  const rg = ctxOf(raw);
+  rg.drawImage(img, sx, sy, sw, sh, 0, 0, sw, sh);
+  chromaKey(raw, keysFor(img));
+  // 2) scale to target size
   const w = Math.max(1, Math.round(sw * scale));
   const h = Math.max(1, Math.round(sh * scale));
   const c = makeCanvas(w, h);
   const g = ctxOf(c);
   g.imageSmoothingEnabled = true; // sheets are upscaled rips; soften on the way down
-  g.drawImage(img, sx, sy, sw, sh, 0, 0, w, h);
+  g.drawImage(raw, 0, 0, sw, sh, 0, 0, w, h);
   return flip ? flipH(c) : c;
 }
 
