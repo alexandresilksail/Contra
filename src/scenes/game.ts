@@ -33,6 +33,7 @@ import {
 import { Boss, BOSS_DEFS, damageBoss, drawBoss, updateBoss } from '../entities/boss';
 import { Pickup, drawPickup, updatePickup } from '../entities/pickup';
 import { buildBackground, buildTileArt, THEMES, type BgLayer, type TileArt } from '../gfx/sprites';
+import { bgOriginX, bgOriginY } from '../gfx/bgLayer';
 import { packStage1Bg, packStage1Tiles } from '../gfx/pack';
 import { drawText } from '../gfx/font';
 import { drawCenterBanner, drawHud } from '../ui/hud';
@@ -126,7 +127,9 @@ export class GameScene {
       if (pb) {
         this.bg = {
           sky: pb.sky,
-          layers: [{ sprite: pb.sprite, speed: 0.5, repeat: true, y: VIEW_H - pb.sprite.height }],
+          // world-locked: speed 1 is implied by `lock`, and `y` is a WORLD
+          // coordinate (image row 0), not a screen coordinate
+          layers: [{ sprite: pb.sprite, speed: 1, repeat: true, y: pb.worldY, lock: true }],
         };
       }
     }
@@ -686,10 +689,10 @@ export class GameScene {
     ctx.drawImage(this.bg.sky, 0, 0);
     for (const l of this.bg.layers) {
       const w = l.sprite.width;
-      let ox = -((camX * l.speed) % w);
-      if (ox > 0) ox -= w;
+      const ox = bgOriginX(l, camX);
+      const oy = bgOriginY(l, camY);
       for (let x = ox; x < VIEW_W; x += w) {
-        ctx.drawImage(l.sprite, Math.round(x), Math.round(l.y - camY * l.speed * 0.25));
+        ctx.drawImage(l.sprite, Math.round(x), oy);
       }
     }
 

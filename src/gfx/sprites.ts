@@ -1100,6 +1100,14 @@ export interface BgLayer {
   speed: number; // parallax factor
   repeat: boolean;
   y: number;
+  /**
+   * When true this layer is the STAGE MAP IMAGE and must stay locked to world
+   * coordinates: it is drawn 1:1 with the tilemap (which carries collision) on
+   * both axes, so what the player sees never drifts away from what they can
+   * stand on. Without it the map visual scrolls at `speed` while the terrain
+   * scrolls at 1:1 and the two desynchronise.
+   */
+  lock?: boolean;
 }
 
 export function buildBackground(theme: ThemeColors, seed: number): { sky: Sprite; layers: BgLayer[] } {

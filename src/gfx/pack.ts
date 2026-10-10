@@ -11,7 +11,7 @@
  * obtained sheets into `public/sprites/` (that folder is git-ignored) to enable.
  */
 import { makeCanvas, ctxOf, flipH, scaleSprite, type Sprite, type SpriteSet } from './pixel';
-import { VIEW_H, VIEW_W } from '../config/constants';
+import { GROUND_ROW, TILE, VIEW_H, VIEW_W } from '../config/constants';
 
 /* ------------------------------------------------------------------ */
 /* manifest - all coordinates are in SOURCE SHEET pixels               */
@@ -514,10 +514,25 @@ const BG1_H = 240;
  * canvas filled with the strip's top-row dominant color so the area above
  * the strip blends seamlessly. Null keeps the procedural background.
  */
-export function packStage1Bg(): { sky: Sprite; sprite: Sprite } | null {
+/**
+ * Result of `packStage1Bg`. `worldY` is the world-space Y at which image row 0
+ * is placed, chosen so the bottom edge of the map image sits exactly on the
+ * ground surface line (GROUND_ROW * TILE). The renderer must draw this layer
+ * 1:1 on both axes (see `BgLayer.lock`) so the map visual and the collision
+ * tilemap can never drift apart.
+ */
+export interface Stage1Bg {
+  sky: Sprite;
+  sprite: Sprite;
+  worldY: number;
+}
+
+export function packStage1Bg(): Stage1Bg | null {
   const img = images.stage1bg;
   if (!img) return null;
   const sprite = slice(img, [0, 0, img.width, BG1_H], 1);
+  // bottom edge of the strip == top of the ground row, in world coordinates
+  const worldY = GROUND_ROW * TILE - sprite.height;
   // dominant color of the top rows -> seamless sky fill above the strip
   let top = '#04070f';
   const g = ctxOf(sprite);
@@ -545,7 +560,7 @@ export function packStage1Bg(): { sky: Sprite; sprite: Sprite } | null {
   const sg = ctxOf(sky);
   sg.fillStyle = top;
   sg.fillRect(0, 0, VIEW_W, VIEW_H);
-  return { sky, sprite };
+  return { sky, sprite, worldY };
 }
 
 /* ------------------------------------------------------------------ */
