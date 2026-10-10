@@ -4,9 +4,14 @@
  * 1px rect operations onto offscreen canvases. No external image files exist.
  */
 import { PAL } from '../config/constants';
-import { makeCanvas, ctxOf, flipH, type Sprite, type SpriteSet } from './pixel';
-import { packPlayerArt } from './pack';
+import { makeCanvas, ctxOf, flipH, fitSetHeight, type Sprite, type SpriteSet } from './pixel';
+import { packPlayerArt, packEnemyFrames } from './pack';
 import { makeRng } from '../core/math';
+
+/** Humanoid "commando" enemies that reuse the authentic red-soldier sheet. */
+const SOLDIER_KINDS = new Set<string>([
+  'grunt', 'runner', 'heavy', 'sniper', 'shield', 'bomber', 'jumper', 'flame',
+]);
 
 export type { Sprite, SpriteSet };
 
@@ -542,7 +547,15 @@ export const ENEMY_ART: Record<string, () => SpriteSet[]> = {
   worm: () => wormSet('#7a5a8a'),
 };
 
-export function buildEnemyArt(kind: string): SpriteSet[] {
+export function buildEnemyArt(kind: string, targetH = 22): SpriteSet[] {
+  // Authentic commando enemies: reuse the red-soldier sheet, scaled to the
+  // entity hitbox height so they line up with collision/foot placement.
+  if (SOLDIER_KINDS.has(kind)) {
+    const pack = packEnemyFrames();
+    if (pack) {
+      return pack.map((set) => fitSetHeight(set, targetH));
+    }
+  }
   const build = ENEMY_ART[kind] ?? ENEMY_ART.grunt;
   return build();
 }

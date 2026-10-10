@@ -65,6 +65,34 @@ export function tint(src: HTMLCanvasElement, color: string): HTMLCanvasElement {
   return out;
 }
 
+/** Nearest-neighbour scale of a single canvas (keeps pixel art crisp). */
+export function scaleSprite(src: HTMLCanvasElement, w: number, h: number): HTMLCanvasElement {
+  const out = makeCanvas(w, h);
+  const c = ctxOf(out);
+  c.imageSmoothingEnabled = false;
+  c.drawImage(src, 0, 0, src.width, src.height, 0, 0, Math.max(1, Math.round(w)), Math.max(1, Math.round(h)));
+  return out;
+}
+
+/** Scale every frame of a SpriteSet to a target size (preserving its flip pairs). */
+export function scaleSet(set: SpriteSet, w: number, h: number): SpriteSet {
+  return {
+    right: set.right.map((s) => scaleSprite(s, w, h)),
+    left: set.left.map((s) => scaleSprite(s, w, h)),
+  };
+}
+
+/**
+ * Scale a SpriteSet so its height == targetH and its width keeps the source
+ * aspect ratio. Used to fit ripped sheet frames onto entity hitboxes.
+ */
+export function fitSetHeight(set: SpriteSet, targetH: number): SpriteSet {
+  const src = set.right[0];
+  if (!src || src.height <= 0) return set;
+  const w = Math.max(1, Math.round((src.width * targetH) / src.height));
+  return scaleSet(set, w, targetH);
+}
+
 export type Sprite = HTMLCanvasElement;
 export type SpriteSet = { right: Sprite[]; left: Sprite[] };
 

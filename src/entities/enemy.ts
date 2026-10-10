@@ -48,7 +48,7 @@ const artCache = new Map<string, SpriteSet[]>();
 function artFor(kind: string): SpriteSet[] {
   let a = artCache.get(kind);
   if (!a) {
-    a = buildEnemyArt(kind);
+    a = buildEnemyArt(kind, ENEMY_DEFS[kind]?.h ?? 22);
     artCache.set(kind, a);
   }
   return a;
@@ -507,7 +507,8 @@ export function updateEnemy(e: Enemy, dt: number, w: WorldCtx): void {
   if (e.def.kind === 'turret') {
     e.frame = 0;
   } else if (moving || e.flying || e.def.noGravity) {
-    e.frame = Math.floor(e.animT * (e.def.speed > 100 ? 14 : 8)) % 4;
+    const n = Math.max(1, artFor(e.kind).length);
+    e.frame = Math.floor(e.animT * (e.def.speed > 100 ? 14 : 8)) % n;
   } else {
     e.frame = 0;
   }

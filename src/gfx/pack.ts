@@ -316,6 +316,41 @@ export function packPickupIcon(index: number): Sprite | null {
 }
 
 /* ------------------------------------------------------------------ */
+/* enemy soldiers                                                       */
+/* ------------------------------------------------------------------ */
+
+/**
+ * The character sheet's RIGHT column is the red-commando palette. In Contra
+ * the basic enemy infantry is a red commando that shares the player sprite
+ * data with a different palette, so this column is the faithful source for
+ * enemy soldiers (there is no separate enemy sheet). Coordinates are the
+ * right-column walk cycle / poses, measured on the sheet (2x rip), sliced
+ * back to 1x via PLAYER_SCALE.
+ */
+const ENEMY_CYCLE: Cell[] = [
+  [1064, 24, 18, 33],
+  [1127, 26, 21, 32],
+  [1196, 25, 14, 32],
+  [1259, 25, 16, 32],
+  [1321, 26, 22, 32],
+  [1394, 24, 13, 33],
+  [1454, 25, 20, 32],
+  [1517, 24, 22, 34],
+  [1586, 25, 18, 32],
+  [1649, 26, 20, 31],
+  [1712, 25, 22, 33],
+  [1781, 26, 18, 31],
+];
+
+/** Enemy soldier walk cycle (right+left), 1x; null when the pack is absent. */
+export function packEnemyFrames(): SpriteSet[] | null {
+  const img = images.players;
+  if (!img) return null;
+  const S = PLAYER_SCALE;
+  return ENEMY_CYCLE.map((c) => cellSet(img, [c], S));
+}
+
+/* ------------------------------------------------------------------ */
 /* title logo                                                          */
 /* ------------------------------------------------------------------ */
 

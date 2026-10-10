@@ -84,6 +84,8 @@ export function drawPickup(ctx: CanvasRenderingContext2D, p: Pickup, camX: numbe
   const x = Math.round(p.x - camX);
   const y = Math.round(p.y - camY);
   if (p.kind === 'weapon') {
+    const wdef = weaponDef(p.weapon);
+    // Capsule background: sheet sprite when present, else procedural capsule.
     const icon = packPickupIcon(Math.max(0, WEAPON_ORDER.indexOf(p.weapon)));
     if (icon) {
       ctx.drawImage(icon, Math.round(x + (p.w - icon.width) / 2), Math.round(y + (p.h - icon.height) / 2));
@@ -91,13 +93,15 @@ export function drawPickup(ctx: CanvasRenderingContext2D, p: Pickup, camX: numbe
       const frames = capsule(p.weapon);
       const spr = frames[Math.floor(p.animT * 8) % frames.length];
       ctx.drawImage(spr, x, y);
-      drawText(ctx, weaponDef(p.weapon).letter, x + p.w / 2, y + 4, {
-        color: PAL.white,
-        shadow: PAL.black,
-        align: 'center',
-        scale: 1,
-      });
     }
+    // Authoritative letter overlay (correct for all 7 weapons, independent of
+    // the sheet's baked glyph, which only has 5 cells and mismatched letters).
+    drawText(ctx, wdef.letter, x + p.w / 2, y + p.h - 7, {
+      color: PAL.white,
+      shadow: PAL.black,
+      align: 'center',
+      scale: 1,
+    });
   } else if (p.kind === 'life') {
     const spr = heart();
     ctx.drawImage(spr, x + 3, y + 3);
