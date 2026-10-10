@@ -7,6 +7,12 @@ dist/
 # optional local sprite pack (NEVER commit - keep copyrighted sheets local)
 public/sprites/
 
+# analysis artefacts derived from the sprite pack (same rule: never commit)
+# - tools/*.png are contact sheets cropped straight out of the sheets
+# - tools/frames.json holds measured bounding boxes of the same frames
+tools/*.png
+tools/frames.json
+
 # logs
 *.log
 npm-debug.log*
