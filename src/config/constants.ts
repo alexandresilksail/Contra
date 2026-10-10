@@ -32,6 +32,12 @@ export const PLAYER_AIR_ACCEL = 620;
 /* ---------------- combat ---------------- */
 export const INVULN_TIME = 1.6; // seconds after respawn
 export const HIT_FLASH = 0.12;
+/** Non-fatal hit: knockback + hurt pose before control returns. */
+export const HURT_TIME = 0.26;
+/** How long the "firing" pose is held after a shot (muzzle + recoil pose). */
+export const SHOOT_ANIM_TIME = 0.16;
+/** Landing recovery (crouch-out of the jump pose). */
+export const LAND_TIME = 0.1;
 export const DEATH_TIME = 1.1;
 export const RESPAWN_DELAY = 0.85;
 export const START_LIVES = 3;

@@ -1,16 +1,26 @@
 import {
   DEATH_TIME,
   GRAVITY,
+  HURT_TIME,
   INVULN_TIME,
   JUMP_CUT,
   JUMP_VELOCITY,
   LADDER_SPEED,
+  LAND_TIME,
   MAX_FALL,
   PAL,
   PLAYER_ACCEL,
   PLAYER_AIR_ACCEL,
   PLAYER_FRICTION,
+  SHOOT_ANIM_TIME,
 } from '../config/constants';
+import {
+  animFrame,
+  animTag,
+  resolveMoveState,
+  type AnimTag,
+  type MoveState,
+} from './playerState';
 import { clamp } from '../core/math';
 import type { InputState, WorldCtx } from '../core/world';
 import type { Enemy } from './enemy';
@@ -40,10 +50,19 @@ export class Player {
   onLadder = false;
   crouching = false;
   grounded = false;
+  /** Lifecycle state (scene / respawn / HUD depend on these values). */
   state: PlayerState = 'alive';
   stateT = 0;
+  /** Locomotion pose, resolved from real physics every fixed step. */
+  moveState: MoveState = 'idle';
   animT = 0;
   frame = 0;
+  /** >0 while the "firing" pose is held (combines with any locomotion pose). */
+  shootT = 0;
+  /** >0 during hit-stun / knockback. */
+  hurtT = 0;
+  /** >0 just after touching down. */
+  landT = 0;
   lives = 3;
   hp = 3;
   maxHp = 3;
@@ -110,6 +129,34 @@ export class Player {
     this.invuln = INVULN_TIME;
     this.onLadder = false;
     this.hp = this.maxHp;
+    this.moveState = 'idle';
+    this.animT = 0;
+    this.frame = 0;
+    this.shootT = 0;
+    this.hurtT = 0;
+    this.landT = 0;
+    this.hurtFlash = 0;
+    this.aimAngle = 0;
+  }
+
+  /** Rendered animation tag, e.g. RUN or SHOOT_JUMP. Used by tests + HUD. */
+  get anim(): AnimTag {
+    return animTag(this.moveState, this.shootT > 0 && this.state === 'alive');
+  }
+
+  /** How many frames the active art set actually has for a pose. */
+  private frameCount(s: MoveState): number {
+    const a = this.art;
+    switch (s) {
+      case 'run':
+        return Math.max(1, a.run.length);
+      case 'climb':
+        return Math.max(1, a.climb.length);
+      case 'dead':
+        return Math.max(1, a.dead.length);
+      default:
+        return 1;
+    }
   }
 
   /** Returns true when the hit was fatal. */
@@ -127,6 +174,8 @@ export class Player {
       this.kill(w, 'hit');
       return true;
     }
+    // non-fatal: hit-stun pose + knockback before control returns
+    this.hurtT = HURT_TIME;
     this.invuln = 0.9;
     w.audio.sfx('hurt');
     w.particles.burst(this.x + this.w / 2, this.y + this.h / 2, 6, [PAL.red, PAL.white], 90, 0.3);
@@ -142,16 +191,24 @@ export class Player {
     if (this.hurtFlash > 0) this.hurtFlash -= dt;
     if (this.muzzle > 0) this.muzzle -= dt;
     if (this.fireCd > 0) this.fireCd -= dt;
+    if (this.hurtT > 0) this.hurtT -= dt;
+    if (this.shootT > 0) this.shootT -= dt;
+    if (this.landT > 0) this.landT -= dt;
 
     if (this.state === 'dying') {
       this.vy += GRAVITY * dt;
       this.vy = Math.min(this.vy, MAX_FALL);
       moveAndCollide(this as any, w.level, dt, { oneWay: false });
+      this.moveState = 'dead';
+      this.animT += dt;
+      this.frame = animFrame(this.moveState, this.animT, this.frameCount(this.moveState));
       if (this.stateT >= DEATH_TIME) this.state = 'dead';
       return;
     }
     if (this.state === 'dead' || this.state === 'victory') {
+      this.moveState = this.state === 'victory' ? 'victory' : 'dead';
       this.animT += dt;
+      this.frame = animFrame(this.moveState, this.animT, this.frameCount(this.moveState));
       return;
     }
 
@@ -230,7 +287,10 @@ export class Player {
     this.vy = body.vy;
     this.onGround = r2.grounded;
     this.grounded = r2.grounded;
-    if (r2.grounded && !this.wasGrounded) w.audio.sfx('land');
+    if (r2.grounded && !this.wasGrounded) {
+      w.audio.sfx('land');
+      this.landT = LAND_TIME;
+    }
     this.wasGrounded = r2.grounded;
     this.x = clamp(this.x, 0, level.pixelW - this.w);
 
@@ -272,11 +332,32 @@ export class Player {
     /* --- shoot --- */
     if (input.shootHeld && this.fireCd <= 0) this.fire(w);
 
-    /* --- animation --- */
+    /* --- animation state machine -------------------------------------
+     * The pose is derived from REAL physics every step, and the cycle only
+     * restarts when the pose actually changes (so a run always begins on its
+     * first stride instead of resuming a stale frame counter).
+     * ------------------------------------------------------------------ */
+    // TS narrows this.state to 'alive' after the early returns above; keep the
+    // full union so the resolver stays honest if a new lifecycle state appears.
+    const life = this.state as PlayerState;
+    const next = resolveMoveState({
+      dying: life === 'dying',
+      dead: life === 'dead',
+      victory: life === 'victory',
+      hurtT: this.hurtT,
+      onLadder: this.onLadder,
+      onGround: this.onGround,
+      crouching: this.crouching,
+      vy: this.vy,
+      vx: this.vx,
+    });
+    if (next !== this.moveState) {
+      this.moveState = next;
+      this.animT = 0;
+      this.frame = 0;
+    }
     this.animT += dt;
-    const moving = Math.abs(this.vx) > 12;
-    if (moving) this.frame = Math.floor(this.animT * 11) % 4;
-    else this.frame = 0;
+    this.frame = animFrame(this.moveState, this.animT, this.frameCount(this.moveState));
     void canStand;
 
     /* --- auto pickups handled by scene --- */
@@ -294,6 +375,8 @@ export class Player {
     }
     this.fireCd = def.interval;
     this.muzzle = 0.06;
+    // hold the armed pose briefly; it combines with run/jump/crouch/climb
+    this.shootT = SHOOT_ANIM_TIME;
     const dmgScale = this.def.damage;
     const ox = this.x + this.w / 2;
     const oy = this.y + (this.crouching ? this.h - 5 : this.h * 0.42);
@@ -328,9 +411,12 @@ export class Player {
       PAL.yellow,
       2,
     );
-    // recoil
-    this.vx -= Math.cos(base) * def.recoil * this.def.recoil;
-    if (this.onGround === false && def.recoil > 60) this.vy -= Math.sin(base) * def.recoil * 0.4;
+    // Recoil: full kick in the air (that is what makes air control matter);
+    // on the ground the commando braces, so it stays a nudge and does not flip
+    // the pose from IDLE to RUN on its own.
+    const recoilScale = this.onGround ? 0.3 : 1;
+    this.vx -= Math.cos(base) * def.recoil * this.def.recoil * recoilScale;
+    if (!this.onGround && def.recoil > 60) this.vy -= Math.sin(base) * def.recoil * 0.4;
   }
 
   kill(w: WorldCtx, cause = 'hit'): void {
@@ -352,24 +438,43 @@ export class Player {
     if (!this.active) return;
     if (this.invuln > 0 && this.state === 'alive' && Math.floor(this.invuln * 20) % 2 === 0) return;
     const a = this.art;
+    // firing COMBINES with locomotion (as in the original); it never replaces it
+    const armed = this.state === 'alive' && this.shootT > 0;
     let set: { right: HTMLCanvasElement[]; left: HTMLCanvasElement[] };
-    if (this.state === 'dying' || this.state === 'dead') {
-      set = a.dead[Math.min(1, Math.floor(this.stateT * 6))];
-    } else if (this.state === 'victory') {
-      set = a.victory;
-    } else if (this.crouching) {
-      set = a.crouch;
-    } else if (this.onLadder) {
-      set = a.climb[Math.floor(this.animT * 6) % 2];
-    } else if (!this.onGround) {
-      set = this.vy < 0 ? a.jump : a.fall;
-    } else if (Math.abs(this.vx) > 12) {
-      set = a.run[this.frame];
-    } else {
-      set = a.idle;
+    switch (this.moveState) {
+      case 'dead':
+        set = a.dead[Math.min(this.frame, a.dead.length - 1)] ?? a.dead[0];
+        break;
+      case 'victory':
+        set = a.victory;
+        break;
+      case 'hurt':
+        set = a.hurt;
+        break;
+      case 'climb': {
+        const c = armed ? a.shoot.climb : a.climb;
+        set = c[Math.min(this.frame, c.length - 1)] ?? c[0];
+        break;
+      }
+      case 'crouch':
+        set = armed ? a.shoot.crouch : a.crouch;
+        break;
+      case 'jump':
+        set = armed ? a.shoot.jump : a.jump;
+        break;
+      case 'fall':
+        set = armed ? a.shoot.fall : a.fall;
+        break;
+      case 'run': {
+        const r = armed ? a.shoot.run : a.run;
+        set = r[Math.min(this.frame, r.length - 1)] ?? r[0];
+        break;
+      }
+      default:
+        set = armed ? a.shoot.idle : a.idle;
     }
     const dir = this.facing > 0 ? set.right : set.left;
-    const spr = dir[0];
+    const spr = dir[0] ?? set.right[0];
     const px = Math.round(this.x + this.w / 2 - spr.width / 2 - camX);
     const py = Math.round(this.y + this.h - spr.height - camY);
 
@@ -378,18 +483,30 @@ export class Player {
     }
     ctx.drawImage(spr, px, py);
 
-    // arm + gun rotated to the aim direction (8 baked directions).
-    // skipped for sprite-pack bodies: the sheet art already holds the rifle.
+    // Arm + gun rotated to the live aim angle, anchored at the shoulder so the
+    // weapon stays attached to the hand in all 8 directions. Skipped for
+    // sprite-pack bodies: the sheet art already holds the rifle.
     if (this.state === 'alive' && !this.art.packActive) {
       const gi = Math.round(((-this.aimAngle + Math.PI * 2) % (Math.PI * 2)) / (Math.PI / 4)) % 8;
       const gun = a.gun[(gi + 8) % 8];
-      const sx = this.x + this.w / 2 + (this.facing > 0 ? 1 : -1) - camX;
-      const sy = this.y + (this.crouching ? this.h - 6 : this.h * 0.4) - camY;
-      ctx.drawImage(gun, Math.round(sx - gun.width / 2), Math.round(sy - gun.height / 2));
+      const o = this.def.opts;
+      const sx = Math.round(this.x + this.w / 2 + (this.facing > 0 ? 1 : -1) - camX);
+      const sy = Math.round(this.y + (this.crouching ? this.h * 0.5 : this.h * 0.42) - camY);
+      ctx.strokeStyle = o.skin;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(sx, sy);
+      ctx.lineTo(sx + Math.cos(this.aimAngle) * 5, sy + Math.sin(this.aimAngle) * 5);
+      ctx.stroke();
+      ctx.drawImage(
+        gun,
+        Math.round(sx + Math.cos(this.aimAngle) * 6 - gun.width / 2),
+        Math.round(sy + Math.sin(this.aimAngle) * 6 - gun.height / 2),
+      );
     }
     if (this.state === 'alive' && this.muzzle > 0) {
       const sx = this.x + this.w / 2 - camX;
-      const sy = this.y + (this.crouching ? this.h - 6 : this.h * 0.4) - camY;
+      const sy = this.y + (this.crouching ? this.h * 0.5 : this.h * 0.42) - camY;
       ctx.fillStyle = PAL.yellow;
       const mx = sx + Math.cos(this.aimAngle) * 10;
       const my = sy + Math.sin(this.aimAngle) * 10;

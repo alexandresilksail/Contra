@@ -28,7 +28,44 @@
 - 跳跃支持 coyote + buffer + 切割，且可从梯子起跳。
 - **行走可边跑边射、边跳边射**（与原作一致）：射击 `fire()` 独立于移动状态（`player.ts:273,285`）。
 
-**已知差距（Phase 3 待补）**：玩家 `state` 仍是 `'alive'|'dying'|'dead'|'victory'`，未拆成 `IDLE/RUN/JUMP/FALL/CROUCH/CLIMB/SHOOT/HURT/DEAD` 全状态机；动画用 `moving ? 4 帧循环 : idle` 简化（`player.ts:277-279`）。艺术姿势（run/jump/fall/crouch/climb）已存在但未全部接状态。
+### 1.1 玩家状态机（Phase 3 已完成）
+
+`player.state`（`alive/dying/dead/victory`）保留为**生命周期**状态，场景/复活/HUD 依赖它，不改动。
+新增正交的**位移动画状态** `Player.moveState`（`src/entities/playerState.ts`）：
+
+| 状态 | 进入条件（每固定步由真实物理判定） | 源码 |
+|------|-----------------------------------|------|
+| `IDLE` | 在地面、不蹲、不满爬、`\|vx\| ≤ 12` | `playerState.ts:resolveMoveState` |
+| `RUN` | 在地面、`\|vx\| > 12` | 同上 |
+| `JUMP` | 不在地面且 `vy < 0` | 同上 |
+| `FALL` | 不在地面且 `vy ≥ 0` | 同上 |
+| `CROUCH` | 在地面且蹲下 | 同上 |
+| `CLIMB` | `onLadder` | 同上 |
+| `HURT` | `hurtT > 0`（非致命受击，`HURT_TIME = 0.26`） | `player.ts:hurt()` |
+| `DEAD` | `dying/dead` | `player.ts:update()` |
+| `VICTORY` | 通关 | `scenes/game.ts` |
+
+**射击是叠加层而非替换层**（原作行为）：`shootT > 0` 时选用该位移姿态的**持枪变体** `art.shoot.*`，
+得到 `SHOOT_IDLE / SHOOT_RUN / SHOOT_JUMP / SHOOT_FALL / SHOOT_CROUCH / SHOOT_CLIMB`。
+`HURT`/`DEAD` 无持枪变体。
+
+动画驱动规则：姿态变化时 `animT` 与 `frame` 归零（跑步永远从第一步开始，不再沿用上一姿态的陈旧帧计数）；
+帧号 = `animFrame(state, animT, 实际美术帧数)`，按真实帧数取模，不会越界。
+
+| 参数 | 值 | 源码 |
+|------|----|------|
+| 跑步帧率 | 12 FPS | `playerState.ts:ANIM_FPS` |
+| 站立帧率 | 2 FPS（呼吸感） | 同上 |
+| 爬梯帧率 | 8 FPS | 同上 |
+| 死亡帧率 | 2 FPS（先翻滚后尸体） | 同上 |
+| 射击姿态保持 | `SHOOT_ANIM_TIME = 0.16` | `constants.ts` |
+| 受击硬直 | `HURT_TIME = 0.26` | `constants.ts` |
+
+**后坐力修正**：地面后坐力降为 30%（空中仍 100%）。原实现里步枪 30px/s 的后坐力会把静止玩家推成
+`RUN` 姿态（`\|vx\|=30 > 12`），导致"站着开枪却在播放跑步动画"。
+
+验证：`tests/playerState.test.ts`（25 项，含纯函数与真实物理驱动）；浏览器实测键盘输入序列
+观察到 `IDLE→RUN→SHOOT_RUN→SHOOT_JUMP→JUMP→SHOOT_FALL→FALL→CROUCH→SHOOT_CROUCH→SHOOT_IDLE`。
 
 ---
 

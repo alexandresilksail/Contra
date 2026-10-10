@@ -4,7 +4,7 @@
  * 1px rect operations onto offscreen canvases. No external image files exist.
  */
 import { PAL } from '../config/constants';
-import { makeCanvas, ctxOf, flipH, fitSetHeight, type Sprite, type SpriteSet } from './pixel';
+import { makeCanvas, ctxOf, flipH, type Sprite, type SpriteSet } from './pixel';
 import { packPlayerArt, packEnemyFrames } from './pack';
 import { makeRng } from '../core/math';
 
@@ -40,9 +40,22 @@ export interface HumanOpts {
   legs?: 'boots' | 'thin' | 'claw' | 'wheel';
 }
 
-export type Pose = 'idle' | 'run0' | 'run1' | 'run2' | 'run3' | 'jump' | 'fall' | 'crouch' | 'climb0' | 'climb1' | 'hurt' | 'dead0' | 'dead1' | 'victory';
+export type Pose =
+  | 'idle'
+  | 'run0' | 'run1' | 'run2' | 'run3' | 'run4' | 'run5'
+  | 'jump' | 'fall' | 'crouch' | 'climb0' | 'climb1'
+  | 'hurt' | 'dead0' | 'dead1' | 'victory';
 
-export function drawHumanoid(o: HumanOpts, pose: Pose): Sprite {
+export interface HumanDrawOpts {
+  /**
+   * Skip the baked-in rifle. Used for player bodies: the weapon is drawn at
+   * runtime rotated to the live aim angle, so it stays attached to the hand
+   * in all 8 directions instead of always pointing right.
+   */
+  noGun?: boolean;
+}
+
+export function drawHumanoid(o: HumanOpts, pose: Pose, opts?: HumanDrawOpts): Sprite {
   const W = o.w;
   const H = o.h;
   const c = makeCanvas(W, H);
@@ -121,6 +134,14 @@ export function drawHumanoid(o: HumanOpts, pose: Pose): Sprite {
         drawLegs(cx - 3, yy(feetY), 0, 0);
         drawLegs(cx, yy(feetY), 0, 2);
         break;
+      case 'run4':
+        drawLegs(cx - 5, yy(feetY), 2, 1);
+        drawLegs(cx + 2, yy(feetY), -2, 0);
+        break;
+      case 'run5':
+        drawLegs(cx - 2, yy(feetY), 0, 1);
+        drawLegs(cx - 1, yy(feetY), 0, 0);
+        break;
       default:
         drawLegs(cx - 4 + (bulk > 1 ? -1 : 0), yy(feetY), 0, 0);
         drawLegs(cx + 1 + (bulk > 1 ? 1 : 0), yy(feetY), 0, 0);
@@ -191,7 +212,7 @@ export function drawHumanoid(o: HumanOpts, pose: Pose): Sprite {
   }
 
   /* --- weapon (right hand, pointing +x) --- */
-  if (o.gun) {
+  if (o.gun && !opts?.noGun) {
     const gy = armY + (crouch ? 2 : 1);
     r(g, cx + 2, gy, 7, 2, o.gun);
     r(g, cx + 7, gy - 1, 2, 1, o.gun);
@@ -211,6 +232,20 @@ export function drawHumanoid(o: HumanOpts, pose: Pose): Sprite {
 /* player characters                                                    */
 /* ------------------------------------------------------------------ */
 
+/**
+ * Armed variants of every locomotion pose. In the original the commando keeps
+ * his rifle raised while running / jumping / proning, so firing COMBINES with
+ * locomotion instead of interrupting it.
+ */
+export interface ShootArt {
+  idle: SpriteSet;
+  run: SpriteSet[];
+  jump: SpriteSet;
+  fall: SpriteSet;
+  crouch: SpriteSet;
+  climb: SpriteSet[];
+}
+
 export interface PlayerArt {
   idle: SpriteSet;
   run: SpriteSet[];
@@ -221,6 +256,8 @@ export interface PlayerArt {
   hurt: SpriteSet;
   dead: SpriteSet[];
   victory: SpriteSet;
+  /** rifle-raised variants, selected while `shootT > 0` */
+  shoot: ShootArt;
   gun: Sprite[]; // 8 aim directions
   portrait: Sprite;
   /** true when the body poses come from the sprite pack (guns are baked in) */
@@ -316,22 +353,37 @@ export type CharId = (typeof CHAR_DEFS)[number]['id'];
 
 export function buildPlayerArt(defIndex: number): PlayerArt {
   const o = CHAR_DEFS[defIndex].opts as HumanOpts;
-  const runPoses: Pose[] = ['run0', 'run1', 'run2', 'run3'];
+  // 6-frame ground cycle, matching the 6-frame run cycle measured on the
+  // character sheet (see docs/assets-inventory.md).
+  const runPoses: Pose[] = ['run0', 'run1', 'run2', 'run3', 'run4', 'run5'];
+  // bodies carry no baked rifle: the runtime aim overlay owns the weapon so it
+  // points where the player is actually aiming.
+  const body = (p: Pose) => drawHumanoid(o, p, { noGun: true });
   const base: PlayerArt = {
-    idle: mkSet([drawHumanoid(o, 'idle')]),
-    run: runPoses.map((p) => mkSet([drawHumanoid(o, p)])),
-    jump: mkSet([drawHumanoid(o, 'jump')]),
-    fall: mkSet([drawHumanoid(o, 'fall')]),
-    crouch: mkSet([drawHumanoid(o, 'crouch')]),
-    climb: [mkSet([drawHumanoid(o, 'climb0')]), mkSet([drawHumanoid(o, 'climb1')])],
-    hurt: mkSet([drawHumanoid(o, 'hurt')]),
-    dead: [mkSet([drawHumanoid(o, 'dead0')]), mkSet([drawHumanoid(o, 'dead1')])],
-    victory: mkSet([drawHumanoid(o, 'victory')]),
+    idle: mkSet([body('idle')]),
+    run: runPoses.map((p) => mkSet([body(p)])),
+    jump: mkSet([body('jump')]),
+    fall: mkSet([body('fall')]),
+    crouch: mkSet([body('crouch')]),
+    climb: [mkSet([body('climb0')]), mkSet([body('climb1')])],
+    hurt: mkSet([body('hurt')]),
+    dead: [mkSet([body('dead0')]), mkSet([body('dead1')])],
+    victory: mkSet([body('victory')]),
+    // procedural armed poses reuse the locomotion bodies; the raised rifle is
+    // drawn on top, rotated to the live aim angle.
+    shoot: {
+      idle: mkSet([body('idle')]),
+      run: runPoses.map((p) => mkSet([body(p)])),
+      jump: mkSet([body('jump')]),
+      fall: mkSet([body('fall')]),
+      crouch: mkSet([body('crouch')]),
+      climb: [mkSet([body('climb0')]), mkSet([body('climb1')])],
+    },
     gun: bakeGun(o.gun ?? PAL.steel, 11),
     portrait: bakePortrait(o, 3),
   };
-  // optional sprite-pack override (body poses only; gun + portrait stay procedural)
-  const pack = packPlayerArt(CHAR_DEFS[defIndex].id);
+  // optional sprite-pack override (bodies + armed variants; gun stays procedural)
+  const pack = packPlayerArt(CHAR_DEFS[defIndex].id, o.h - 2);
   return pack ? { ...base, ...pack, packActive: true } : base;
 }
 
@@ -548,13 +600,11 @@ export const ENEMY_ART: Record<string, () => SpriteSet[]> = {
 };
 
 export function buildEnemyArt(kind: string, targetH = 22): SpriteSet[] {
-  // Authentic commando enemies: reuse the red-soldier sheet, scaled to the
+  // Authentic commando enemies: reuse the red-soldier sheet, normalised to the
   // entity hitbox height so they line up with collision/foot placement.
   if (SOLDIER_KINDS.has(kind)) {
-    const pack = packEnemyFrames();
-    if (pack) {
-      return pack.map((set) => fitSetHeight(set, targetH));
-    }
+    const pack = packEnemyFrames(targetH);
+    if (pack) return pack;
   }
   const build = ENEMY_ART[kind] ?? ENEMY_ART.grunt;
   return build();

@@ -10,7 +10,7 @@
  * NOTE: the repo intentionally ships NO image files. Drop your own legally
  * obtained sheets into `public/sprites/` (that folder is git-ignored) to enable.
  */
-import { makeCanvas, ctxOf, flipH, type Sprite, type SpriteSet } from './pixel';
+import { makeCanvas, ctxOf, flipH, scaleSprite, type Sprite, type SpriteSet } from './pixel';
 import { VIEW_H, VIEW_W } from '../config/constants';
 
 /* ------------------------------------------------------------------ */
@@ -42,57 +42,66 @@ interface CharMap {
   dead: Cell[];
 }
 
-/* Block A of the character sheet: Bill on the left half, Lance on the right. */
+/**
+ * Block A of the character sheet: Bill (blue panel) on the left half, the red
+ * commando (Lance / enemy soldiers) on the right half.
+ *
+ * Both halves use the SAME 12-frame layout on the y=24 band. Measured with
+ * tools/player_frames.py + tools/titan_frames.py (uniform 30px-wide probe):
+ *
+ *   frames 0..5  -> content 15..22px wide  : unarmed ground cycle (run)
+ *   frames 6..11 -> content 20..25px wide  : armed ground cycle (run + rifle
+ *                  extended forward, visible as a horizontal bar at chest
+ *                  height in tools/player_ascii.py)
+ *
+ * Cells are a uniform window (w=26, h=36) - wide/tall enough for every frame
+ * and short enough not to bleed into the next pose band. Empty margins are
+ * removed by trimSprite() and the group is then bottom-aligned by
+ * alignFrames(), so this only needs to be *approximately* right.
+ *
+ * NOTE: the red column previously listed only 10 frames (x=1517 and x=1712
+ * were missing); it is 12, mirroring the blue column.
+ */
+const CYCLE_X = {
+  razor: [25, 90, 154, 220, 285, 349, 415, 480, 544, 610, 675, 739],
+  titan: [1063, 1127, 1195, 1258, 1321, 1392, 1453, 1517, 1585, 1648, 1712, 1780],
+} as const;
+
+/** Indices of the unarmed run cycle / armed run cycle inside the 12 frames. */
+export const RUN_FRAME_IDX = [0, 1, 2, 3, 4, 5];
+export const SHOOT_FRAME_IDX = [6, 7, 8, 9, 10, 11];
+/** Most compact unarmed frame - used as the standing / idle pose. */
+export const IDLE_FRAME_IDX = 2;
+
+const cycleCells = (col: keyof typeof CYCLE_X): Cell[] =>
+  CYCLE_X[col].map((x) => [x, 24, 26, 36] as Cell);
+
 export const PACK_MAP: Record<string, CharMap> = {
   razor: {
-    cycle: [
-      [25, 24, 19, 48],
-      [90, 25, 20, 46],
-      [154, 24, 19, 48],
-      [220, 24, 18, 48],
-      [285, 25, 20, 46],
-      [349, 24, 20, 48],
-      [415, 24, 25, 48],
-      [480, 25, 25, 46],
-      [544, 24, 26, 48],
-      [610, 25, 25, 47],
-      [675, 26, 25, 45],
-      [739, 25, 26, 47],
-    ],
-    jump: [25, 203, 18, 48],
-    fall: [220, 204, 18, 47],
+    cycle: cycleCells('razor'),
+    jump: [25, 203, 20, 48],
+    fall: [220, 203, 20, 48],
     crouch: [919, 42, 40, 16],
     climb: [
       [804, 8, 18, 64],
-      [869, 9, 18, 63],
+      [869, 8, 18, 64],
     ],
     dead: [
       [413, 203, 19, 64],
-      [478, 204, 19, 64],
+      [478, 203, 19, 64],
     ],
   },
   titan: {
-    cycle: [
-      [1063, 24, 20, 48],
-      [1127, 25, 21, 42],
-      [1195, 24, 16, 48],
-      [1258, 24, 18, 48],
-      [1321, 25, 22, 42],
-      [1392, 24, 16, 48],
-      [1453, 24, 26, 48],
-      [1585, 24, 24, 48],
-      [1648, 25, 26, 47],
-      [1780, 25, 24, 47],
-    ],
-    jump: [1063, 203, 18, 48],
-    fall: [1258, 204, 18, 47],
+    cycle: cycleCells('titan'),
+    jump: [1063, 203, 20, 48],
+    fall: [1258, 203, 20, 48],
     crouch: [1959, 41, 40, 17],
     climb: [
       [1845, 8, 16, 64],
-      [1910, 9, 16, 63],
+      [1910, 8, 16, 64],
     ],
     dead: [
-      [1195, 203, 16, 64],
+      [1195, 203, 17, 64],
       [1454, 203, 17, 64],
     ],
   },
@@ -237,7 +246,7 @@ function chromaKey(canvas: HTMLCanvasElement, spec: KeySpec | null): void {
   g.putImageData(data, 0, 0);
 }
 
-function slice(img: HTMLImageElement, cell: Cell, scale: number, flip = false): Sprite {
+function slice(img: HTMLImageElement, cell: Cell, scale: number, flip = false, trim = false): Sprite {
   const [sx, sy, sw, sh] = cell;
   // 1) cut at source resolution and key out the panel background first,
   //    so downscale blending never smears panel color into sprite edges
@@ -245,14 +254,81 @@ function slice(img: HTMLImageElement, cell: Cell, scale: number, flip = false): 
   const rg = ctxOf(raw);
   rg.drawImage(img, sx, sy, sw, sh, 0, 0, sw, sh);
   chromaKey(raw, keysFor(img));
-  // 2) scale to target size
-  const w = Math.max(1, Math.round(sw * scale));
-  const h = Math.max(1, Math.round(sh * scale));
+  // 2) drop the empty margin around the sprite (at source resolution, so the
+  //    scale factor below stays exact and pixels stay crisp)
+  const src = trim ? trimSprite(raw) : raw;
+  const ssw = src.width;
+  const ssh = src.height;
+  // 3) scale to target size
+  const w = Math.max(1, Math.round(ssw * scale));
+  const h = Math.max(1, Math.round(ssh * scale));
   const c = makeCanvas(w, h);
   const g = ctxOf(c);
   g.imageSmoothingEnabled = true; // sheets are upscaled rips; soften on the way down
-  g.drawImage(raw, 0, 0, sw, sh, 0, 0, w, h);
+  g.drawImage(src, 0, 0, ssw, ssh, 0, 0, w, h);
   return flip ? flipH(c) : c;
+}
+
+/* ------------------------------------------------------------------ */
+/* frame normalisation                                                 */
+/* ------------------------------------------------------------------ */
+
+/** Tight alpha bounding box, or null when the frame is empty / unsupported. */
+function alphaBox(src: Sprite): { x: number; y: number; w: number; h: number } | null {
+  const g = ctxOf(src);
+  if (typeof g.getImageData !== 'function') return null; // stub ctx (tests)
+  const d = g.getImageData(0, 0, src.width, src.height).data;
+  let minx = src.width;
+  let miny = src.height;
+  let maxx = -1;
+  let maxy = -1;
+  for (let y = 0; y < src.height; y++) {
+    for (let x = 0; x < src.width; x++) {
+      if (d[(y * src.width + x) * 4 + 3] <= 8) continue;
+      if (x < minx) minx = x;
+      if (x > maxx) maxx = x;
+      if (y < miny) miny = y;
+      if (y > maxy) maxy = y;
+    }
+  }
+  if (maxx < 0) return null;
+  return { x: minx, y: miny, w: maxx - minx + 1, h: maxy - miny + 1 };
+}
+
+/** Crop a sprite to its opaque pixels (keeps pixel edges, no resampling). */
+function trimSprite(src: Sprite): Sprite {
+  const b = alphaBox(src);
+  if (!b) return src;
+  if (b.x === 0 && b.y === 0 && b.w === src.width && b.h === src.height) return src;
+  const out = makeCanvas(b.w, b.h);
+  ctxOf(out).drawImage(src, b.x, b.y, b.w, b.h, 0, 0, b.w, b.h);
+  return out;
+}
+
+/**
+ * Put every frame of a group on a common canvas with the content
+ * left- and bottom-aligned. Without this, rimmed frames of differing sizes
+ * make the character jitter sideways and float above the ground.
+ */
+function alignFrames(frames: Sprite[]): Sprite[] {
+  let mw = 1;
+  let mh = 1;
+  for (const f of frames) {
+    mw = Math.max(mw, f.width);
+    mh = Math.max(mh, f.height);
+  }
+  return frames.map((f) => {
+    if (f.width === mw && f.height === mh) return f;
+    const c = makeCanvas(mw, mh);
+    ctxOf(c).drawImage(f, 0, mh - f.height);
+    return c;
+  });
+}
+
+/** Uniformly rescale a group (keeps relative pose sizes, e.g. prone stays short). */
+function scaleFrames(frames: Sprite[], k: number): Sprite[] {
+  if (Math.abs(k - 1) < 0.001) return frames;
+  return frames.map((f) => scaleSprite(f, f.width * k, f.height * k));
 }
 
 function mkSet(frames: Sprite[]): SpriteSet {
@@ -263,9 +339,29 @@ function cellSet(img: HTMLImageElement, cells: Cell[], scale: number): SpriteSet
   return mkSet(cells.map((c) => slice(img, c, scale)));
 }
 
+/** Slice a pose group: trim -> bottom-align -> uniform scale. */
+function groupSet(
+  img: HTMLImageElement,
+  cells: Cell[],
+  scale: number,
+  k = 1,
+): Sprite[] {
+  const frames = alignFrames(cells.map((c) => slice(img, c, scale, false, true)));
+  return scaleFrames(frames, k);
+}
+
 /* ------------------------------------------------------------------ */
 /* public art builders (return null -> caller keeps procedural art)    */
 /* ------------------------------------------------------------------ */
+
+export interface PackShootArt {
+  idle: SpriteSet;
+  run: SpriteSet[];
+  jump: SpriteSet;
+  fall: SpriteSet;
+  crouch: SpriteSet;
+  climb: SpriteSet[];
+}
 
 export interface PackBodyArt {
   idle: SpriteSet;
@@ -277,33 +373,60 @@ export interface PackBodyArt {
   hurt: SpriteSet;
   dead: SpriteSet[];
   victory: SpriteSet;
+  /** rifle-raised variants (sheet frames 6..11) */
+  shoot: PackShootArt;
   portrait: Sprite;
 }
 
-/** Body poses for a character id; null when the pack is unavailable. */
-export function packPlayerArt(charId: string): PackBodyArt | null {
+/**
+ * Body poses for a character id; null when the pack is unavailable.
+ *
+ * `targetH` is the entity hitbox height: the standing cycle is scaled so the
+ * drawn sprite matches it, and every other pose is scaled by the SAME factor
+ * (so prone/climb keep their correct relative size).
+ */
+export function packPlayerArt(charId: string, targetH = 22): PackBodyArt | null {
   const img = images.players;
   const map = PACK_MAP[charId];
-  if (!img || !map) return null;
+  if (!img || !map || !map.cycle.length) return null;
 
   const S = PLAYER_SCALE;
-  const frames = map.cycle.map((c) => slice(img, c, S));
-  const idle = mkSet([frames[0] ?? frames[0]]);
-  // spread the cycle so the run animation reads as movement
-  const runIdx = [1, 3, 5, 7].map((i) => Math.min(i, frames.length - 1));
-  const run = runIdx.map((i) => mkSet([frames[i]]));
+  // all 12 ground frames share one alignment/normalisation pass so the
+  // unarmed and armed cycles have identical feet placement and body offset
+  const cyc = alignFrames(map.cycle.map((c) => slice(img, c, S, false, true)));
+  const standH = cyc[0]?.height ?? 0;
+  const k = standH > 0 ? targetH / standH : 1;
+  const cycF = scaleFrames(cyc, k);
+
+  const run = RUN_FRAME_IDX.map((i) => mkSet([cycF[Math.min(i, cycF.length - 1)]]));
+  const shootRun = SHOOT_FRAME_IDX.map((i) => mkSet([cycF[Math.min(i, cycF.length - 1)]]));
+  const idleFrame = cycF[Math.min(IDLE_FRAME_IDX, cycF.length - 1)];
+
+  const jumpF = groupSet(img, [map.jump], S, k);
+  const fallF = groupSet(img, [map.fall], S, k);
+  const crouchF = groupSet(img, [map.crouch], S, k);
+  const climbF = groupSet(img, map.climb, S, k);
+  const deadF = groupSet(img, map.dead, S, k);
 
   return {
-    idle,
+    idle: mkSet([idleFrame]),
     run,
-    jump: cellSet(img, [map.jump], S),
-    fall: cellSet(img, [map.fall], S),
-    crouch: cellSet(img, [map.crouch], S),
-    climb: map.climb.map((c) => cellSet(img, [c], S)),
-    hurt: idle,
-    dead: map.dead.map((c) => cellSet(img, [c], S)),
-    victory: mkSet([frames[0]]),
-    portrait: slice(img, map.cycle[0], PLAYER_SCALE * 3),
+    jump: mkSet([jumpF[0]]),
+    fall: mkSet([fallF[0]]),
+    crouch: mkSet([crouchF[0]]),
+    climb: climbF.map((f) => mkSet([f])),
+    hurt: mkSet([idleFrame]),
+    dead: deadF.map((f) => mkSet([f])),
+    victory: mkSet([cycF[0]]),
+    shoot: {
+      idle: mkSet([shootRun[0].right[0]]),
+      run: shootRun,
+      jump: mkSet([jumpF[0]]),
+      fall: mkSet([fallF[0]]),
+      crouch: mkSet([crouchF[0]]),
+      climb: climbF.map((f) => mkSet([f])),
+    },
+    portrait: slice(img, map.cycle[IDLE_FRAME_IDX], PLAYER_SCALE * 3, false, true),
   };
 }
 
@@ -323,31 +446,24 @@ export function packPickupIcon(index: number): Sprite | null {
  * The character sheet's RIGHT column is the red-commando palette. In Contra
  * the basic enemy infantry is a red commando that shares the player sprite
  * data with a different palette, so this column is the faithful source for
- * enemy soldiers (there is no separate enemy sheet). Coordinates are the
- * right-column walk cycle / poses, measured on the sheet (2x rip), sliced
- * back to 1x via PLAYER_SCALE.
+ * enemy soldiers (there is no separate enemy sheet).
+ *
+ * Same 12-frame ground band as the player column (see CYCLE_X) - enemies
+ * carry their rifle at all times, so the whole 12-frame cycle is used.
  */
-const ENEMY_CYCLE: Cell[] = [
-  [1064, 24, 18, 33],
-  [1127, 26, 21, 32],
-  [1196, 25, 14, 32],
-  [1259, 25, 16, 32],
-  [1321, 26, 22, 32],
-  [1394, 24, 13, 33],
-  [1454, 25, 20, 32],
-  [1517, 24, 22, 34],
-  [1586, 25, 18, 32],
-  [1649, 26, 20, 31],
-  [1712, 25, 22, 33],
-  [1781, 26, 18, 31],
-];
+const ENEMY_CYCLE_X: readonly number[] = CYCLE_X.titan;
 
-/** Enemy soldier walk cycle (right+left), 1x; null when the pack is absent. */
-export function packEnemyFrames(): SpriteSet[] | null {
+/** Enemy soldier walk cycle, normalised; null when the pack is absent. */
+export function packEnemyFrames(targetH = 22): SpriteSet[] | null {
   const img = images.players;
   if (!img) return null;
   const S = PLAYER_SCALE;
-  return ENEMY_CYCLE.map((c) => cellSet(img, [c], S));
+  const cells = ENEMY_CYCLE_X.map((x) => [x, 24, 26, 36] as Cell);
+  // one alignment pass for the whole cycle so soldiers never jitter or float
+  const frames = alignFrames(cells.map((c) => slice(img, c, S, false, true)));
+  const h = frames[0]?.height ?? 0;
+  const scaled = scaleFrames(frames, h > 0 ? targetH / h : 1);
+  return scaled.map((f) => mkSet([f]));
 }
 
 /* ------------------------------------------------------------------ */
