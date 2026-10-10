@@ -429,7 +429,8 @@ export class GameScene {
     b.maxHp = this.def.bossHp;
     b.arenaLeft = left;
     b.arenaRight = right;
-    b.y = this.findGroundY(b.x + b.w / 2, b.h) - 120;
+    // entry state descends exactly 96px, so start one descent above the ground
+    b.y = this.findGroundY(b.x + b.w / 2, b.h) - 96;
     this.boss = b;
     this.world.boss = b;
     this.phase = 'boss';

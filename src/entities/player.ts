@@ -22,7 +22,8 @@ import { TILE } from '../config/constants';
 
 export type PlayerState = 'alive' | 'dying' | 'dead' | 'victory';
 
-const BASE_SPEED = 178;
+/** Contra-paced run speed (NES run ≈ 7.5 tiles/s at 16px tiles). */
+const BASE_SPEED = 122;
 
 export class Player {
   index: 0 | 1;
@@ -377,21 +378,24 @@ export class Player {
     }
     ctx.drawImage(spr, px, py);
 
-    // arm + gun rotated to the aim direction (8 baked directions)
-    if (this.state === 'alive') {
+    // arm + gun rotated to the aim direction (8 baked directions).
+    // skipped for sprite-pack bodies: the sheet art already holds the rifle.
+    if (this.state === 'alive' && !this.art.packActive) {
       const gi = Math.round(((-this.aimAngle + Math.PI * 2) % (Math.PI * 2)) / (Math.PI / 4)) % 8;
       const gun = a.gun[(gi + 8) % 8];
       const sx = this.x + this.w / 2 + (this.facing > 0 ? 1 : -1) - camX;
       const sy = this.y + (this.crouching ? this.h - 6 : this.h * 0.4) - camY;
       ctx.drawImage(gun, Math.round(sx - gun.width / 2), Math.round(sy - gun.height / 2));
-      if (this.muzzle > 0) {
-        ctx.fillStyle = PAL.yellow;
-        const mx = sx + Math.cos(this.aimAngle) * 10;
-        const my = sy + Math.sin(this.aimAngle) * 10;
-        ctx.fillRect(Math.round(mx - 2), Math.round(my - 2), 4, 4);
-        ctx.fillStyle = PAL.white;
-        ctx.fillRect(Math.round(mx - 1), Math.round(my - 1), 2, 2);
-      }
+    }
+    if (this.state === 'alive' && this.muzzle > 0) {
+      const sx = this.x + this.w / 2 - camX;
+      const sy = this.y + (this.crouching ? this.h - 6 : this.h * 0.4) - camY;
+      ctx.fillStyle = PAL.yellow;
+      const mx = sx + Math.cos(this.aimAngle) * 10;
+      const my = sy + Math.sin(this.aimAngle) * 10;
+      ctx.fillRect(Math.round(mx - 2), Math.round(my - 2), 4, 4);
+      ctx.fillStyle = PAL.white;
+      ctx.fillRect(Math.round(mx - 1), Math.round(my - 1), 2, 2);
     }
     ctx.globalAlpha = 1;
 

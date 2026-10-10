@@ -113,6 +113,7 @@ const FILES = {
   title: 'title.png',
   stage1bg: 'stage1bg.png',
   tiles1: 'tiles1.png',
+  wall1: 'wall1.png',
 } as const;
 
 /* ------------------------------------------------------------------ */
@@ -193,6 +194,13 @@ const KEY_COLORS: Record<string, KeySpec> = {
     dist: 40,
   },
   tiles1: { colors: [[0, 0, 0]], dist: 30 },
+  wall1: {
+    colors: [
+      [0, 48, 0], // green backdrop
+      [0, 0, 0], // black shadow panels
+    ],
+    dist: 40,
+  },
 };
 
 function keysFor(img: HTMLImageElement): KeySpec | null {
@@ -323,6 +331,24 @@ export function packTitleLogo(): Sprite | null {
   const img = images.title;
   if (!img) return null;
   return slice(img, TITLE_LOGO, 1);
+}
+
+/* ------------------------------------------------------------------ */
+/* stage 1 boss - defense wall                                          */
+/* ------------------------------------------------------------------ */
+
+/**
+ * The full fortress-wall sheet (223x192). Drawn for the stage-1 boss,
+ * scaled into the boss hitbox; the glowing core sits at ~(50,115) on the
+ * sheet, which maps to the weak-point offset [-34, +10] at 0.55 scale.
+ */
+const WALL_SCALE = 0.55;
+
+/** Stage-1 defense wall override; null keeps the procedural boss art. */
+export function packBossWall(): { sprite: Sprite; scale: number } | null {
+  const img = images.wall1;
+  if (!img) return null;
+  return { sprite: slice(img, [0, 0, img.width, img.height], WALL_SCALE), scale: WALL_SCALE };
 }
 
 /* ------------------------------------------------------------------ */

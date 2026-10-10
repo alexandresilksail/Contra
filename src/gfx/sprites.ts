@@ -218,6 +218,8 @@ export interface PlayerArt {
   victory: SpriteSet;
   gun: Sprite[]; // 8 aim directions
   portrait: Sprite;
+  /** true when the body poses come from the sprite pack (guns are baked in) */
+  packActive?: boolean;
 }
 
 const mkSet = (frames: Sprite[]): SpriteSet => ({ right: frames, left: frames.map(flipH) });
@@ -261,7 +263,7 @@ export const CHAR_DEFS = [
     name: 'RAZOR',
     subtitle: 'FAST / STABLE',
     desc: ['HIGH SPEED', 'NORMAL JUMP', 'STEADY FIRE'],
-    speed: 1.15,
+    speed: 1.06,
     jump: 1.0,
     damage: 1.0,
     recoil: 1.0,
@@ -284,7 +286,7 @@ export const CHAR_DEFS = [
     name: 'TITAN',
     subtitle: 'POWER / RECOIL-LESS',
     desc: ['NORMAL SPEED', 'HEAVY FIREPOWER', 'LOW RECOIL'],
-    speed: 0.92,
+    speed: 0.88,
     jump: 1.06,
     damage: 1.35,
     recoil: 0.55,
@@ -325,7 +327,7 @@ export function buildPlayerArt(defIndex: number): PlayerArt {
   };
   // optional sprite-pack override (body poses only; gun + portrait stay procedural)
   const pack = packPlayerArt(CHAR_DEFS[defIndex].id);
-  return pack ? { ...base, ...pack } : base;
+  return pack ? { ...base, ...pack, packActive: true } : base;
 }
 
 /* ------------------------------------------------------------------ */

@@ -1,6 +1,7 @@
 import { PAL, TILE } from '../config/constants';
 import type { WorldCtx } from '../core/world';
 import { buildBossArt, type BossArt } from '../gfx/sprites';
+import { packBossWall, packReady } from '../gfx/pack';
 import type { Player } from './player';
 
 export type Atk =
@@ -42,18 +43,20 @@ const A = {
 export const BOSS_DEFS: Record<string, BossDef> = {
   commander: {
     id: 'commander',
-    name: 'BASE COMMANDER',
+    name: 'DEFENSE WALL',
     hp: 100,
-    w: 72,
-    h: 60,
-    move: 'walk',
-    speed: 46,
-    weak: [16, -14],
+    // matches the wall sprite (223x192 sheet at 0.55 scale -> ~123x106)
+    w: 122,
+    h: 105,
+    move: 'static',
+    speed: 0,
+    // glowing core on the sheet maps here relative to the box centre
+    weak: [-34, 10],
     minions: ['grunt', 'runner'],
     phases: [
-      [A.aimed(3, 0.2, 250, 2.6, 0.7), A.charge(180, 1.6, 1.6)],
+      [A.aimed(3, 0.2, 250, 2.6, 0.7), A.spread(5, 0.9, 230, 2.4, 0.55)],
       [A.spread(5, 0.9, 230, 2.4, 0.55), A.aimed(3, 0.14, 280, 2.0, 0.6), A.summon('grunt', 2, 1.0, 1.0)],
-      [A.spread(7, 1.2, 250, 2.6, 0.42), A.ring(14, 200, 2.0, 0.6), A.charge(230, 1.4, 1.4), A.summon('heavy', 1, 0.8, 0.8)],
+      [A.spread(7, 1.2, 250, 2.6, 0.42), A.ring(14, 200, 2.0, 0.6), A.aimed(4, 0.18, 290, 1.8, 0.5), A.summon('heavy', 1, 0.8, 0.8)],
     ],
   },
   guardian: {
@@ -503,16 +506,18 @@ export function damageBoss(b: Boss, dmg: number, w: WorldCtx, x: number, y: numb
 }
 
 export function drawBoss(ctx: CanvasRenderingContext2D, b: Boss, camX: number, camY: number, debug = false): void {
-  const spr = b.art.body[b.frame % b.art.body.length];
+  // stage-1 defense wall uses the sprite-pack art when available
+  const wall = b.def.id === 'commander' && packReady() ? packBossWall() : null;
   const px = Math.round(b.x - camX);
   const py = Math.round(b.y - camY);
-  ctx.drawImage(spr, px, py);
+  const spr = wall ? wall.sprite : b.art.body[b.frame % b.art.body.length];
+  ctx.drawImage(spr, px, py, b.w, b.h);
   if (b.hurtFlash > 0) {
     ctx.save();
     ctx.globalCompositeOperation = 'source-atop';
     ctx.globalAlpha = 0.6;
     ctx.fillStyle = PAL.white;
-    ctx.fillRect(px, py, spr.width, Math.min(spr.height, b.h));
+    ctx.fillRect(px, py, b.w, b.h);
     ctx.restore();
   }
   // weak point

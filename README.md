@@ -140,7 +140,8 @@ public/sprites/
 ├── pickups.png   # 武器胶囊图标（5 个，按 x = 0/25/50/75/100 切片）
 ├── title.png     # 标题字标（色键抠底后替换程序化 Logo）
 ├── stage1bg.png  # Stage 1 全景背景（视差滚动层，底部白边自动裁切）
-└── tiles1.png    # Stage 1 瓦片（地面草皮/岩石填充/薄台/水面动画，黑 = 透明键）
+├── tiles1.png    # Stage 1 瓦片（地面草皮/岩石填充/薄台/水面动画，黑 = 透明键）
+└── wall1.png     # Stage 1 Boss「DEFENSE WALL」整体贴图（自动缩放至 Boss 判定框）
 ```
 
 - 该目录已写入 `.gitignore`，**仓库不包含任何图片文件**；请自行放入你**合法获得**的素材。
@@ -181,7 +182,8 @@ iron-storm/
 │   │   ├── sprites.ts      # 程序化生成角色/敌人/Boss/背景/瓦片
 │   │   └── font.ts         # 位图字体
 │   ├── level/
-│   │   ├── level.ts        # 关卡运行时（瓦片碰撞、梯子、危险物）
+│   │   ├── level.ts        # 关卡运行时（瓦片碰撞、梯子、危险物、手绘地图混入）
+│   │   ├── layouts.ts      # Stage 1 手绘地图（按原版丛林流程编排：出生走廊/河流双桥/高地/堡垒门）
 │   │   ├── stages.ts       # 8 关定义 + 波次生成
 │   │   └── tiles.ts        # 瓦片类型与主题
 │   ├── scenes/

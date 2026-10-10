@@ -15,6 +15,9 @@ export class Level {
   readonly pixelH: number;
   readonly chunkCount: number;
   private chunks = new Map<number, Uint8Array>();
+  /** pre-built authored map (stage layouts); served instead of procgen chunks */
+  private authored: Uint8Array | null = null;
+  private authoredViews = new Map<number, Uint8Array>();
   doorOpen = false;
   /** destructible tiles that were destroyed (key = ty * tilesX + tx) */
   destroyed = new Set<number>();
@@ -24,11 +27,35 @@ export class Level {
     this.pixelW = def.tiles * TILE;
     this.pixelH = LEVEL_ROWS * TILE;
     this.chunkCount = Math.ceil(def.tiles / CHUNK_TILES);
+    if (def.layout) {
+      // authored maps arrive row-major (stride = tilesX); convert to the
+      // chunk layout Level.get() expects: 16-col blocks, row stride CHUNK_TILES
+      const src = def.layout(def);
+      const full = new Uint8Array(this.chunkCount * CHUNK_TILES * LEVEL_ROWS);
+      for (let col = 0; col < def.tiles; col++) {
+        const chunk = Math.floor(col / CHUNK_TILES);
+        const lx = col - chunk * CHUNK_TILES;
+        for (let row = 0; row < LEVEL_ROWS; row++) {
+          full[chunk * CHUNK_TILES * LEVEL_ROWS + row * CHUNK_TILES + lx] = src[row * def.tiles + col];
+        }
+      }
+      this.authored = full;
+    }
   }
 
   /* ------------------------------ chunks ------------------------------ */
 
   chunk(cx: number): Uint8Array {
+    if (this.authored) {
+      let view = this.authoredViews.get(cx);
+      if (!view) {
+        if (cx < 0 || cx >= this.chunkCount) return new Uint8Array(CHUNK_TILES * LEVEL_ROWS);
+        const start = cx * CHUNK_TILES * LEVEL_ROWS;
+        view = this.authored.subarray(start, start + CHUNK_TILES * LEVEL_ROWS);
+        this.authoredViews.set(cx, view);
+      }
+      return view;
+    }
     if (cx < 0 || cx >= this.chunkCount) {
       // outside the map: return a solid block so nothing can escape sideways
       const empty = new Uint8Array(CHUNK_TILES * LEVEL_ROWS);

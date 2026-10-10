@@ -1,5 +1,6 @@
 import { TILE } from '../config/constants';
 import { rngFrom } from '../core/math';
+import { stage1Map } from './layouts';
 
 export interface WaveEntry {
   kind: string;
@@ -37,6 +38,8 @@ export interface StageDef {
   music: number;
   /** forced-scroll section: [startTile, endTile, speedPxPerSec] */
   scroll?: [number, number, number];
+  /** hand-authored tile map (returns the full column-major grid); skips procgen */
+  layout?: typeof stage1Map;
 }
 
 export const STAGES: StageDef[] = [
@@ -60,6 +63,7 @@ export const STAGES: StageDef[] = [
     bossName: 'BASE COMMANDER',
     bossHp: 100,
     music: 0,
+    layout: stage1Map,
   },
   {
     id: 2,
