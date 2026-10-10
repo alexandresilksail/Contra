@@ -1,6 +1,15 @@
 import { TILE } from '../config/constants';
 import { rngFrom } from '../core/math';
-import { stage1Map } from './layouts';
+import {
+  stage1Map,
+  stage2Map,
+  stage3Map,
+  stage4Map,
+  stage5Map,
+  stage6Map,
+  stage7Map,
+  stage8Map,
+} from './layouts';
 
 export interface WaveEntry {
   kind: string;
@@ -85,6 +94,7 @@ export const STAGES: StageDef[] = [
     bossName: 'FOREST GUARDIAN',
     bossHp: 130,
     music: 1,
+    layout: stage2Map,
   },
   {
     id: 3,
@@ -106,6 +116,7 @@ export const STAGES: StageDef[] = [
     bossName: 'FOUNDRY CRAWLER',
     bossHp: 160,
     music: 2,
+    layout: stage3Map,
   },
   {
     id: 4,
@@ -127,6 +138,7 @@ export const STAGES: StageDef[] = [
     bossName: 'CAVERN MAW',
     bossHp: 190,
     music: 3,
+    layout: stage4Map,
   },
   {
     id: 5,
@@ -149,6 +161,7 @@ export const STAGES: StageDef[] = [
     bossHp: 220,
     music: 4,
     scroll: [120, 190, 62],
+    layout: stage5Map,
   },
   {
     id: 6,
@@ -170,6 +183,7 @@ export const STAGES: StageDef[] = [
     bossName: 'FROST CORE',
     bossHp: 250,
     music: 5,
+    layout: stage6Map,
   },
   {
     id: 7,
@@ -191,6 +205,7 @@ export const STAGES: StageDef[] = [
     bossName: 'HIVE MIND',
     bossHp: 280,
     music: 6,
+    layout: stage7Map,
   },
   {
     id: 8,
@@ -212,6 +227,7 @@ export const STAGES: StageDef[] = [
     bossName: 'DOOM CORE',
     bossHp: 340,
     music: 7,
+    layout: stage8Map,
   },
 ];
 

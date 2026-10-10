@@ -82,6 +82,42 @@ class MapBuilder {
     if (col < 0 || col >= this.cols || row < 0 || row >= LEVEL_ROWS) return;
     this.data[row * this.cols + col] = v;
   }
+
+  /** One-way platform row (solid only when fallen onto from above). */
+  platform(from: number, to: number, row: number): void {
+    for (let c = from; c <= to; c++) this.set(c, row, T.PLATFORM);
+  }
+
+  /** Vertical ladder (non-blocking climb column). */
+  ladder(col: number, topRow: number, bottomRow: number): void {
+    for (let r = topRow; r <= bottomRow; r++) this.set(col, r, T.LADDER);
+  }
+
+  /** Instant-kill spike on the ground surface. Place on flat ground with a
+   *  clear run-up so it can always be jumped. */
+  spike(col: number): void {
+    const top = this.surface(col);
+    if (top < LEVEL_ROWS) this.set(col, top - 1, T.SPIKE);
+  }
+
+  /**
+   * Shallow 2-tile water notch. The surface dips and a solid floor sits just
+   * below the water, so the player can either jump across (2 tiles) or, if
+   * they fall in, hop straight back out — it is never a death trap like a
+   * bottomless pit would be.
+   */
+  notch(from: number, to: number): void {
+    for (let c = from; c <= to; c++) {
+      this.set(c, GROUND_ROW, T.EMPTY);
+      this.set(c, GROUND_ROW + 1, T.WATER);
+      this.set(c, GROUND_ROW + 2, T.SOLID);
+    }
+  }
+
+  /** Raised solid plateau the player jumps onto (cover / sniper perch). */
+  plateau(from: number, to: number, top: number): void {
+    this.flat(from, to, top);
+  }
 }
 
 /**
@@ -151,6 +187,226 @@ export function stage1Map(def: StageDef): Uint8Array {
   const gate = def.bossStart;
   for (let row = G - 6; row < G; row++) b.set(gate, row, T.DOOR);
 
+  return b.data;
+}
+
+/* ------------------------------------------------------------------ */
+/* shared helpers for the authored stages 2-8                          */
+/* ------------------------------------------------------------------ */
+
+/** A climb shaft: a ladder from the ground up to an overhead one-way platform.
+ *  Reachable by climbing; never blocks the ground path. */
+function shaft(b: MapBuilder, c: number, top: number, half: number): void {
+  b.ladder(c, top, GROUND_ROW - 1);
+  b.platform(c - half, c + half, top);
+}
+
+/** Flat final approach + boss gate (door at def.bossStart). The arena is kept
+ *  dead flat so the boss fight is fair and the "arena flat" check holds. */
+function finale(b: MapBuilder, def: StageDef, flatFrom: number): void {
+  b.flat(flatFrom, def.tiles - 1);
+  const gate = def.bossStart;
+  for (let row = GROUND_ROW - 6; row < GROUND_ROW; row++) b.set(gate, row, T.DOOR);
+}
+
+/* ------------------------------------------------------------------ */
+/* Stage 2 — JUNGLE INFILTRATION (forest)                              */
+/* ------------------------------------------------------------------ */
+export function stage2Map(def: StageDef): Uint8Array {
+  const b = new MapBuilder(def.tiles);
+  const G = GROUND_ROW;
+  b.flat(0, def.tiles - 1); // continuous ground base (no empty columns)
+  b.sensor(40); // weapon bonus wall
+  // shallow water crossings (jump or wade)
+  b.notch(54, 55);
+  b.notch(64, 65);
+  b.notch(72, 73);
+  // climbing towers: platform + ladder (also the source of the Stage-2 test counts)
+  for (const c of [86, 110, 134, 158, 182]) shaft(b, c, G - 7, 3);
+  // solid cover plateaus (jump onto; 2 tiles tall -> always clearable)
+  b.plateau(96, 100, G - 2);
+  b.plateau(120, 124, G - 2);
+  b.plateau(144, 148, G - 2);
+  b.plateau(168, 172, G - 2);
+  // jungle pits + crate cover
+  for (let base = 196; base < 250; base += 18) {
+    b.notch(base + 6, base + 7);
+    b.crate(base + 3, 1);
+  }
+  b.spike(238);
+  finale(b, def, 258);
+  return b.data;
+}
+
+/* ------------------------------------------------------------------ */
+/* Stage 3 — IRON FOUNDRY (factory)                                    */
+/* ------------------------------------------------------------------ */
+export function stage3Map(def: StageDef): Uint8Array {
+  const b = new MapBuilder(def.tiles);
+  const G = GROUND_ROW;
+  b.flat(0, def.tiles - 1);
+  b.sensor(38);
+  // crate maze / bunkers
+  b.crate(48, 2);
+  b.crate(60, 1);
+  b.crate(72, 2);
+  b.crate(84, 1);
+  // catwalk galleries: high platforms + ladders
+  for (const c of [96, 130, 164, 198, 232]) shaft(b, c, G - 8, 4);
+  // raised solid catwalks (jump onto)
+  b.plateau(108, 112, G - 2);
+  b.plateau(142, 146, G - 2);
+  b.plateau(176, 180, G - 2);
+  b.plateau(210, 214, G - 2);
+  // roller conveyor corridor: notches + crates
+  for (let base = 248; base < 276; base += 14) {
+    b.notch(base + 5, base + 6);
+    b.crate(base + 2, 1);
+  }
+  b.spike(244);
+  finale(b, def, 280);
+  return b.data;
+}
+
+/* ------------------------------------------------------------------ */
+/* Stage 4 — UNDERGROUND CAVERN (cavern)                               */
+/* ------------------------------------------------------------------ */
+export function stage4Map(def: StageDef): Uint8Array {
+  const b = new MapBuilder(def.tiles);
+  const G = GROUND_ROW;
+  b.flat(0, def.tiles - 1);
+  b.sensor(36);
+  // water pits (shallow notches)
+  for (const [a, c] of [[48, 49], [62, 63], [76, 77], [90, 91], [104, 105]] as [number, number][]) {
+    b.notch(a, c);
+  }
+  // stalagmite plateaus with overhead platforms + ladders
+  for (const c of [120, 156, 192, 228, 264]) shaft(b, c, G - 7, 3);
+  b.plateau(134, 138, G - 2);
+  b.plateau(170, 174, G - 2);
+  b.plateau(206, 210, G - 2);
+  b.plateau(242, 246, G - 2);
+  // worm field
+  for (let base = 274; base < 288; base += 12) {
+    b.notch(base + 4, base + 5);
+    b.crate(base + 1, 1);
+  }
+  b.spike(270);
+  finale(b, def, 290);
+  return b.data;
+}
+
+/* ------------------------------------------------------------------ */
+/* Stage 5 — RUINED CITY (city, forced-scroll corridor)                */
+/* The forced-scroll zone (camera active roughly cols 90-205) is kept   */
+/* perfectly flat and featureless so the auto-scroll can never strand   */
+/* the player on a pit or wall.                                         */
+/* ------------------------------------------------------------------ */
+export function stage5Map(def: StageDef): Uint8Array {
+  const b = new MapBuilder(def.tiles);
+  const G = GROUND_ROW;
+  b.flat(0, def.tiles - 1);
+  b.sensor(30);
+  // pre-scroll ruins (cols < 90)
+  for (const c of [44, 70]) shaft(b, c, G - 8, 4);
+  for (const [a, c] of [[52, 53], [78, 79]] as [number, number][]) b.notch(a, c);
+  // FORCED SCROLL ZONE (90-205): deliberately flat, no features carved here
+  // post-scroll ruins (cols > 205)
+  for (const c of [224, 256, 270]) shaft(b, c, G - 8, 4);
+  for (const [a, c] of [[232, 233], [266, 267]] as [number, number][]) b.notch(a, c);
+  b.crate(240, 1);
+  b.crate(278, 1);
+  b.spike(216);
+  b.spike(286);
+  finale(b, def, 290);
+  return b.data;
+}
+
+/* ------------------------------------------------------------------ */
+/* Stage 6 — FROZEN STRONGHOLD (snow)                                  */
+/* ------------------------------------------------------------------ */
+export function stage6Map(def: StageDef): Uint8Array {
+  const b = new MapBuilder(def.tiles);
+  const G = GROUND_ROW;
+  b.flat(0, def.tiles - 1);
+  b.sensor(38);
+  // ice pits (shallow notches) + plateau ledges
+  for (const [a, c] of [[48, 49], [66, 67], [84, 85], [102, 103]] as [number, number][]) {
+    b.notch(a, c);
+  }
+  for (const c of [110, 150, 190, 230, 270]) shaft(b, c, G - 7, 3);
+  b.plateau(122, 126, G - 2);
+  b.plateau(162, 166, G - 2);
+  b.plateau(202, 206, G - 2);
+  b.plateau(242, 246, G - 2);
+  // crate + pit field
+  for (let base = 282; base < 304; base += 14) {
+    b.notch(base + 5, base + 6);
+    b.crate(base + 2, 1);
+  }
+  b.spike(278);
+  finale(b, def, 310);
+  return b.data;
+}
+
+/* ------------------------------------------------------------------ */
+/* Stage 7 — ALIEN HIVE (alien)                                        */
+/* ------------------------------------------------------------------ */
+export function stage7Map(def: StageDef): Uint8Array {
+  const b = new MapBuilder(def.tiles);
+  const G = GROUND_ROW;
+  b.flat(0, def.tiles - 1);
+  b.sensor(36);
+  // organic web platforms + vertical shafts
+  for (const c of [50, 86, 122, 158, 194, 230, 266, 300]) shaft(b, c, G - 9, 3);
+  // connecting web walkways (one-way, non-blocking)
+  for (const r of [G - 5, G - 11]) {
+    b.platform(60, 80, r);
+    b.platform(132, 152, r);
+    b.platform(204, 224, r);
+    b.platform(276, 296, r);
+  }
+  b.notch(96, 97);
+  b.notch(168, 169);
+  b.notch(240, 241);
+  b.crate(110, 1);
+  b.crate(180, 1);
+  b.crate(250, 1);
+  b.spike(290);
+  finale(b, def, 320);
+  return b.data;
+}
+
+/* ------------------------------------------------------------------ */
+/* Stage 8 — FINAL STRONGHOLD (finalbase)                              */
+/* ------------------------------------------------------------------ */
+export function stage8Map(def: StageDef): Uint8Array {
+  const b = new MapBuilder(def.tiles);
+  const G = GROUND_ROW;
+  b.flat(0, def.tiles - 1);
+  b.sensor(40);
+  // mixed gauntlet: notches + plateaus + shafts
+  for (const [a, c] of [
+    [52, 53],
+    [70, 71],
+    [120, 121],
+    [170, 171],
+    [240, 241],
+    [300, 301],
+  ] as [number, number][]) {
+    b.notch(a, c);
+  }
+  for (const c of [90, 150, 210, 270, 330]) shaft(b, c, G - 8, 4);
+  b.plateau(100, 104, G - 2);
+  b.plateau(160, 164, G - 2);
+  b.plateau(220, 224, G - 2);
+  b.plateau(280, 284, G - 2);
+  b.crate(342, 1);
+  b.crate(348, 1);
+  b.spike(58);
+  b.spike(176);
+  b.spike(306);
+  finale(b, def, 348);
   return b.data;
 }
 
