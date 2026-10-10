@@ -1,3 +1,4 @@
+import pathlib
 """Re-analyze players.png: locate every sprite frame by detecting the opaque
 panel backgrounds, then compute a tight bounding box of the actual sprite
 (discarding the keyed-out panel color). Group frames by row-band and classify
@@ -5,8 +6,10 @@ the band by its panel color so we can tell enemy (red) from player (blue).
 """
 from PIL import Image
 import json, sys
+ROOT = pathlib.Path(__file__).resolve().parent.parent
+SHEET = ROOT / "public" / "sprites"
 
-PATH = "C:/Users/Administrator/WorkBuddy/2026-10-08-04-37-10/game/public/sprites/players.png"
+PATH = "str(SHEET / "players.png")"
 img = Image.open(PATH).convert("RGB")
 W, H = img.size
 px = img.load()
@@ -113,6 +116,6 @@ for item in out:
         print(f"  cell={item[1]} panel={item[2]} px={item[3]}")
 
 # Save compact JSON for later use
-with open("C:/Users/Administrator/WorkBuddy/2026-10-08-04-37-10/game/tools/frames.json","w") as fh:
+with open("frames.json","w") as fh:
     json.dump(frames, fh)
 print("\nTOTAL FRAMES:", len(frames), file=sys.stderr)

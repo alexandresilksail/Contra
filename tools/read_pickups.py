@@ -3,8 +3,10 @@ Each cell is 24x32 (PICKUP_CELLS in pack.ts). We downsample to ~24x16 and
 mark non-transparent (sprite) pixels with '#' to reveal the glyph shape.
 """
 from PIL import Image
-import sys
-PATH = "C:/Users/Administrator/WorkBuddy/2026-10-08-04-37-10/game/public/sprites/pickups.png"
+import sys, pathlib
+ROOT = pathlib.Path(__file__).resolve().parent.parent
+SHEET = ROOT / "public" / "sprites"
+PATH = str(SHEET / "pickups.png")
 img = Image.open(PATH).convert("RGBA")
 W,H = img.size
 print("pickups size", W, H, file=sys.stderr)
