@@ -137,11 +137,15 @@ npm test         # 等价于 vitest run（node 环境下无头运行）
 ```
 public/sprites/
 ├── players.png   # 角色精灵表（覆盖 idle / run / jump / fall / crouch / climb / dead / 选人立绘）
-└── pickups.png   # 武器胶囊图标（5 个，按 x = 0/25/50/75/100 切片）
+├── pickups.png   # 武器胶囊图标（5 个，按 x = 0/25/50/75/100 切片）
+├── title.png     # 标题字标（色键抠底后替换程序化 Logo）
+├── stage1bg.png  # Stage 1 全景背景（视差滚动层，底部白边自动裁切）
+└── tiles1.png    # Stage 1 瓦片（地面草皮/岩石填充/薄台/水面动画，黑 = 透明键）
 ```
 
 - 该目录已写入 `.gitignore`，**仓库不包含任何图片文件**；请自行放入你**合法获得**的素材。
-- 所有切片坐标集中在 `src/gfx/pack.ts` 的 `PACK_MAP` 里；若某个动作姿态不对，只改那里的数字即可，无需动其他代码。
+- 所有切片坐标集中在 `src/gfx/pack.ts`（`PACK_MAP` / `TITLE_LOGO` / `T1`）；若某个姿态或瓦片不对，只改那里的数字即可，无需动其他代码。
+- 素材表的不透明底板由 `slice()` 自动色键抠除（每张表有自己的键色与容差，见 `KEY_COLORS`）。
 - 仓库默认状态（无素材）就是纯程序化原创版本。
 
 ---

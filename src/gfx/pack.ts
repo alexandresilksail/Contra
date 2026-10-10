@@ -11,6 +11,7 @@
  * obtained sheets into `public/sprites/` (that folder is git-ignored) to enable.
  */
 import { makeCanvas, ctxOf, flipH, type Sprite, type SpriteSet } from './pixel';
+import { VIEW_H, VIEW_W } from '../config/constants';
 
 /* ------------------------------------------------------------------ */
 /* manifest - all coordinates are in SOURCE SHEET pixels               */
@@ -109,6 +110,9 @@ const PICKUP_CELLS: Cell[] = [
 const FILES = {
   players: 'players.png',
   pickups: 'pickups.png',
+  title: 'title.png',
+  stage1bg: 'stage1bg.png',
+  tiles1: 'tiles1.png',
 } as const;
 
 /* ------------------------------------------------------------------ */
@@ -161,35 +165,50 @@ export function packHasPlayers(): boolean {
 /* ------------------------------------------------------------------ */
 
 /**
- * Rip sheets draw each sprite on an opaque checkerboard panel. These are the
- * panel shades per sheet; slice() keys them out so sprites get real alpha.
- * Chosen well clear of sprite colors (nearest sprite color is ~80+ away).
+ * Rip sheets draw each sprite on an opaque panel. These are the panel shades
+ * per sheet; slice() keys them out so sprites get real alpha. All shades are
+ * chosen well clear of sprite colors (nearest sprite color is 80+ away,
+ * title/tiles use tight tolerances since they sit right on black/magenta).
  */
-const KEY_COLORS: Record<string, [number, number, number][]> = {
-  players: [
-    [0, 47, 87],
-    [28, 102, 145],
-    [157, 28, 72],
-    [82, 14, 0],
-  ],
-  pickups: [[0, 91, 91]],
+interface KeySpec {
+  colors: [number, number, number][];
+  dist: number;
+}
+const KEY_COLORS: Record<string, KeySpec> = {
+  players: {
+    colors: [
+      [0, 47, 87],
+      [28, 102, 145],
+      [157, 28, 72],
+      [82, 14, 0],
+    ],
+    dist: 70,
+  },
+  pickups: { colors: [[0, 91, 91]], dist: 70 },
+  title: {
+    colors: [
+      [221, 0, 255], // magenta backdrop
+      [0, 0, 0], // black panel behind the logo
+    ],
+    dist: 40,
+  },
+  tiles1: { colors: [[0, 0, 0]], dist: 30 },
 };
-const KEY_DIST = 70; // Euclidean RGB distance threshold
 
-function keysFor(img: HTMLImageElement): [number, number, number][] {
+function keysFor(img: HTMLImageElement): KeySpec | null {
   for (const key of Object.keys(images) as (keyof typeof FILES)[]) {
-    if (images[key] === img) return KEY_COLORS[key] ?? [];
+    if (images[key] === img) return KEY_COLORS[key] ?? null;
   }
-  return [];
+  return null;
 }
 
-function chromaKey(canvas: HTMLCanvasElement, keys: [number, number, number][]): void {
-  if (!keys.length) return;
+function chromaKey(canvas: HTMLCanvasElement, spec: KeySpec | null): void {
+  if (!spec || !spec.colors.length) return;
   const g = ctxOf(canvas);
   const w = canvas.width;
   const h = canvas.height;
   if (typeof g.getImageData !== 'function') return; // stub ctx (tests)
-  const lim = KEY_DIST * KEY_DIST;
+  const lim = spec.dist * spec.dist;
   const data = g.getImageData(0, 0, w, h);
   const d = data.data;
   for (let i = 0; i < d.length; i += 4) {
@@ -197,10 +216,10 @@ function chromaKey(canvas: HTMLCanvasElement, keys: [number, number, number][]):
     const r = d[i];
     const gr = d[i + 1];
     const b = d[i + 2];
-    for (let k = 0; k < keys.length; k++) {
-      const dr = r - keys[k][0];
-      const dg = gr - keys[k][1];
-      const db = b - keys[k][2];
+    for (let k = 0; k < spec.colors.length; k++) {
+      const dr = r - spec.colors[k][0];
+      const dg = gr - spec.colors[k][1];
+      const db = b - spec.colors[k][2];
       if (dr * dr + dg * dg + db * db < lim) {
         d[i + 3] = 0;
         break;
@@ -286,4 +305,130 @@ export function packPickupIcon(index: number): Sprite | null {
   if (!img || !PICKUP_CELLS.length) return null;
   const cell = PICKUP_CELLS[((index % PICKUP_CELLS.length) + PICKUP_CELLS.length) % PICKUP_CELLS.length];
   return slice(img, cell, PICKUP_SCALE);
+}
+
+/* ------------------------------------------------------------------ */
+/* title logo                                                          */
+/* ------------------------------------------------------------------ */
+
+/**
+ * The metallic CONTRA wordmark from the title-screens sheet (the "American
+ * logo" block; the KONAMI mark above it is deliberately NOT included).
+ * Measured on the sheet: x 30..227, y 494..575 (~198x82, draws 1:1).
+ */
+const TITLE_LOGO: Cell = [30, 494, 198, 82];
+
+/** Title logo override; null keeps the procedural logo. */
+export function packTitleLogo(): Sprite | null {
+  const img = images.title;
+  if (!img) return null;
+  return slice(img, TITLE_LOGO, 1);
+}
+
+/* ------------------------------------------------------------------ */
+/* stage 1 background                                                  */
+/* ------------------------------------------------------------------ */
+
+/** The Stage-1 panorama is 3456x245; the last 5 rows are a white border. */
+const BG1_H = 240;
+
+/**
+ * Stage 1 scrolling background. Returns the panorama strip plus a `sky`
+ * canvas filled with the strip's top-row dominant color so the area above
+ * the strip blends seamlessly. Null keeps the procedural background.
+ */
+export function packStage1Bg(): { sky: Sprite; sprite: Sprite } | null {
+  const img = images.stage1bg;
+  if (!img) return null;
+  const sprite = slice(img, [0, 0, img.width, BG1_H], 1);
+  // dominant color of the top rows -> seamless sky fill above the strip
+  let top = '#04070f';
+  const g = ctxOf(sprite);
+  if (typeof g.getImageData === 'function' && sprite.width > 0) {
+    const data = g.getImageData(0, 0, sprite.width, 2).data;
+    const counts = new Map<number, number>();
+    for (let i = 0; i < data.length; i += 4) {
+      if (data[i + 3] < 128) continue;
+      const key = (data[i] << 16) | (data[i + 1] << 8) | data[i + 2];
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+    }
+    let best = -1;
+    let bestN = 0;
+    for (const [key, n] of counts) {
+      if (n > bestN) {
+        bestN = n;
+        best = key;
+      }
+    }
+    if (best >= 0) {
+      top = '#' + best.toString(16).padStart(6, '0');
+    }
+  }
+  const sky = makeCanvas(VIEW_W, VIEW_H);
+  const sg = ctxOf(sky);
+  sg.fillStyle = top;
+  sg.fillRect(0, 0, VIEW_W, VIEW_H);
+  return { sky, sprite };
+}
+
+/* ------------------------------------------------------------------ */
+/* stage 1 tiles                                                       */
+/* ------------------------------------------------------------------ */
+
+/** 16px cells on the Stage-1 tileset (18x4 grid), measured on the sheet. */
+const T1 = {
+  /** grass-mound top (exposed ground surface; rounded corners are authentic) */
+  solidTop: [0, 0, 16, 16] as Cell,
+  /** rocky fill variants (composited over a dark base to hide keyed holes) */
+  solidFill: [
+    [14, 16, 16, 16],
+    [15, 16, 16, 16],
+    [13, 16, 16, 16],
+  ] as Cell[],
+  /** thin ledge = top 6 rows of the grass tiles */
+  platform: [
+    [0, 0, 16, 6],
+    [1, 0, 16, 6],
+  ] as Cell[],
+  /** animated water (3 frames) */
+  water: [
+    [3, 32, 16, 16],
+    [4, 32, 16, 16],
+    [5, 32, 16, 16],
+  ] as Cell[],
+};
+
+/** Dark base under rocky fill tiles so keyed holes never show sky. */
+const FILL_BASE = '#20260a';
+
+/**
+ * Stage-1 tile overrides (solid / platform / water only; ladder, spike,
+ * crate and door have no equivalents on the sheet and stay procedural).
+ */
+export function packStage1Tiles(): {
+  solid: Sprite[];
+  platform: Sprite[];
+  water: Sprite[];
+} | null {
+  const img = images.tiles1;
+  if (!img) return null;
+
+  const solid: Sprite[] = [slice(img, T1.solidTop, 1)];
+  for (const cell of T1.solidFill) {
+    const c = makeCanvas(16, 16);
+    const g = ctxOf(c);
+    g.fillStyle = FILL_BASE;
+    g.fillRect(0, 0, 16, 16);
+    g.drawImage(slice(img, cell, 1), 0, 0);
+    solid.push(c);
+  }
+
+  const platform: Sprite[] = T1.platform.map((cell) => {
+    const c = makeCanvas(16, 16);
+    ctxOf(c).drawImage(img, cell[0], cell[1], cell[2], cell[3], 0, 0, cell[2], cell[3]);
+    return c;
+  });
+
+  const water: Sprite[] = T1.water.map((cell) => slice(img, cell, 1));
+  return { solid, platform, water };
 }

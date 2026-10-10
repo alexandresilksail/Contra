@@ -33,6 +33,7 @@ import {
 import { Boss, BOSS_DEFS, damageBoss, drawBoss, updateBoss } from '../entities/boss';
 import { Pickup, drawPickup, updatePickup } from '../entities/pickup';
 import { buildBackground, buildTileArt, THEMES, type BgLayer, type TileArt } from '../gfx/sprites';
+import { packStage1Bg, packStage1Tiles } from '../gfx/pack';
 import { drawText } from '../gfx/font';
 import { drawCenterBanner, drawHud } from '../ui/hud';
 import { audio } from '../audio/audio';
@@ -113,6 +114,22 @@ export class GameScene {
     this.theme = THEMES[this.def.theme] ?? THEMES.base;
     this.tileArt = buildTileArt(this.theme, this.def.seed);
     this.bg = buildBackground(this.theme, this.def.seed);
+    if (this.def.id === 1) {
+      // optional sprite-pack overrides for stage 1 (silently skipped when absent)
+      const pt = packStage1Tiles();
+      if (pt) {
+        this.tileArt.solid = pt.solid;
+        this.tileArt.platform = pt.platform;
+        this.tileArt.water = pt.water;
+      }
+      const pb = packStage1Bg();
+      if (pb) {
+        this.bg = {
+          sky: pb.sky,
+          layers: [{ sprite: pb.sprite, speed: 0.5, repeat: true, y: VIEW_H - pb.sprite.height }],
+        };
+      }
+    }
     this.continueUsed = opt.continueUsed ?? 0;
 
     this.pbullets.clear();

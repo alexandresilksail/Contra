@@ -1,6 +1,7 @@
 import { PAL, VIEW_H, VIEW_W } from '../config/constants';
 import { drawText, measureText } from '../gfx/font';
 import { buildLogo, buildPlayerArt, CHAR_DEFS, type CharId } from '../gfx/sprites';
+import { packTitleLogo } from '../gfx/pack';
 import { audio } from '../audio/audio';
 import { DEFAULT_KEYS, keyLabel } from '../core/input';
 import { STAGES } from '../level/stages';
@@ -72,18 +73,22 @@ export class TitleScreen {
   help = false;
 
   draw(ctx: CanvasRenderingContext2D): void {
-    ctx.drawImage(logo.big, Math.round((VIEW_W - logo.big.width) / 2), 34);
-
-    drawText(ctx, 'ORIGINAL RUN AND GUN ACTION', VIEW_W / 2, 82, {
-      color: PAL.cyan,
-      align: 'center',
-      scale: 1,
-    });
-    drawText(ctx, 'ALL ART / MUSIC / CODE ORIGINAL', VIEW_W / 2, 92, {
-      color: PAL.grey,
-      align: 'center',
-      scale: 1,
-    });
+    const packLogo = packTitleLogo();
+    if (packLogo) {
+      ctx.drawImage(packLogo, Math.round((VIEW_W - packLogo.width) / 2), 30);
+    } else {
+      ctx.drawImage(logo.big, Math.round((VIEW_W - logo.big.width) / 2), 34);
+      drawText(ctx, 'ORIGINAL RUN AND GUN ACTION', VIEW_W / 2, 82, {
+        color: PAL.cyan,
+        align: 'center',
+        scale: 1,
+      });
+      drawText(ctx, 'ALL ART / MUSIC / CODE ORIGINAL', VIEW_W / 2, 92, {
+        color: PAL.grey,
+        align: 'center',
+        scale: 1,
+      });
+    }
 
     panel(ctx, 200, 118, 240, MENU_ITEMS.length * 14 + 14, PAL.blueDark);
     MENU_ITEMS.forEach((m, i) => {
