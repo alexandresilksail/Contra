@@ -131,6 +131,10 @@
 4. **原作关卡参考图/录像**：无数字化素材，无法做逐帧比对还原；行为规范 (`gameplay-reference.md`) 基于代码现状与常识还原描述。
 5. **门/机关/载具等专项精灵**：无（程序化兜底）。
 6. **音效/音乐文件**：无（程序化蜂鸣 `audio.ts`）。
+7. **第 2–8 关 Boss 原作精灵**：**无**。现有 Boss 素材仅 `wall1.png`（第一关 DEFENSE WALL）。
+   其余 7 个 Boss（guardian / crawler / worm / gunship / frostcore / hivemind / doomcore）
+   全部为程序化绘制。这是**素材缺失**，不是实现缺陷；需新增官方 Boss 图集才能还原。
+   （已实测：这 7 个 Boss 的行为/伤害/弱点/阶段切换均正常，见 `gameplay-reference.md` §13。）
 
 ---
 
