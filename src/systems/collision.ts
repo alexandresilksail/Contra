@@ -49,6 +49,15 @@ export function moveAndCollide(
       for (let ty = ty0; ty <= ty1 && !hit; ty++) {
         for (let tx = tx0; tx <= tx1; tx++) {
           if (isBlocking(level.get(tx, ty))) {
+            // Auto step-up: a lone 1-tile ledge (with headroom above) is
+            // walkable, like the original - the player/ennemy runs up it
+            // instead of being stopped dead by a 1px-tall wall. A taller wall
+            // (no headroom) is still a hard stop.
+            const above = ty - 1 >= 0 ? level.get(tx, ty - 1) : -1;
+            if (!isBlocking(above) && autoStepUp(b, level)) {
+              hit = true; // resolved by climbing, not a wall hit
+              break;
+            }
             if (sx > 0) b.x = tx * TILE - b.w;
             else b.x = (tx + 1) * TILE;
             b.vx = 0;
@@ -99,6 +108,27 @@ export function moveAndCollide(
   return res;
 }
 
+/**
+ * Lift the body by exactly one tile (TILE) if the destination AABB is clear of
+ * any blocking tile. Used to climb a single 1-tile ledge during horizontal
+ * motion. Returns true (and mutates b.y) when the climb succeeded.
+ */
+function autoStepUp(b: Body, level: TileQuery): boolean {
+  const ny = b.y - TILE;
+  if (ny < 0) return false;
+  const tx0 = Math.floor(b.x / TILE);
+  const tx1 = Math.floor((b.x + b.w - 1) / TILE);
+  const ty0 = Math.floor(ny / TILE);
+  const ty1 = Math.floor((ny + b.h - 1) / TILE);
+  for (let ty = ty0; ty <= ty1; ty++) {
+    for (let tx = tx0; tx <= tx1; tx++) {
+      if (isBlocking(level.get(tx, ty))) return false;
+    }
+  }
+  b.y = ny;
+  return true;
+}
+
 /** Ground probe used for AI/ledge detection. */
 export function onGround(b: Body, level: TileQuery): boolean {
   const y = b.y + b.h + 1;
@@ -117,7 +147,15 @@ export function wallAhead(b: Body, level: TileQuery, dir: number): boolean {
   const ty0 = Math.floor((b.y + 2) / TILE);
   const ty1 = Math.floor((b.y + b.h - 2) / TILE);
   const tx = Math.floor(px / TILE);
-  for (let ty = ty0; ty <= ty1; ty++) if (isBlocking(level.get(tx, ty))) return true;
+  for (let ty = ty0; ty <= ty1; ty++) {
+    if (isBlocking(level.get(tx, ty))) {
+      // a lone 1-tile ledge is climbable (see moveAndCollide), so it is not a
+      // wall for steering purposes - only a taller obstacle turns the mover.
+      const above = ty - 1 >= 0 ? level.get(tx, ty - 1) : -1;
+      if (!isBlocking(above)) return false;
+      return true;
+    }
+  }
   return false;
 }
 

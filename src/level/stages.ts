@@ -66,8 +66,12 @@ export const STAGES: StageDef[] = [
     water: 0.1,
     crates: 1,
     spikes: 0.12,
-    enemyPool: ['grunt', 'runner', 'turret'],
-    flyerPool: ['flyer'],
+    // Stage 1 only uses enemy kinds that have an uploaded sprite sheet (the
+    // red-commando column of players.png). turret/flyer/mech have no uploaded
+    // art, so they fall back to procedural geometry - which the spec forbids -
+    // hence they are excluded here. See docs/asset-manifest.md.
+    enemyPool: ['grunt', 'runner', 'heavy', 'sniper', 'shield', 'bomber', 'jumper', 'flame'],
+    flyerPool: [],
     density: 1.5,
     // Boss gate sits BEFORE the ravine (pits at cols 144-169). The arena is the
     // single screen [100, 139]; the camera locks there, so the ravine and the
@@ -269,32 +273,39 @@ export function buildWaves(def: StageDef): Wave[] {
     if (rnd() < 0.45) {
       entries.push({ kind: rnd.pick(def.enemyPool), count: 1 + Math.floor(rnd() * 2), from: 'left', delay: 0.6 });
     }
-    if (rnd() < 0.42) {
+    if (def.flyerPool.length > 0 && rnd() < 0.42) {
       entries.push({ kind: rnd.pick(def.flyerPool), count: 1 + Math.floor(rnd() * 2), from: 'air', delay: 0.3 });
     }
     if (rnd() < 0.3) {
-      entries.push({ kind: 'turret', count: 1, from: 'spot', delay: 0 });
+      // Stage 1 uses only enemy kinds that have an uploaded sprite (the
+      // red-commando column of players.png); geometric turret is excluded here
+      // for stage 1. Other stages keep their procedural turret. See
+      // docs/asset-manifest.md.
+      entries.push({ kind: def.id === 1 ? rnd.pick(def.enemyPool) : 'turret', count: 1, from: 'spot', delay: 0 });
     }
     waves.push({ x: x * TILE, entries, done: false });
   }
 
-  // scripted mid-boss encounter
+  // scripted mid-boss encounter (stage 1 uses a soldier - no uploaded mech art)
   waves.push({
     x: midX * TILE,
     entries: [
-      { kind: 'mech', count: 1, from: 'right', delay: 0 },
+      { kind: def.id === 1 ? 'heavy' : 'mech', count: 1, from: 'right', delay: 0 },
       { kind: rnd.pick(def.enemyPool), count: 2, from: 'right', delay: 1.2 },
     ],
     done: false,
   });
 
-  // final defensive line in front of the boss gate
+  // final defensive line in front of the boss gate (stage 1 uses a soldier -
+  // no uploaded turret/flyer art, so no geometric enemies spawn)
   waves.push({
     x: (def.bossStart - 20) * TILE,
     entries: [
-      { kind: 'turret', count: 1, from: 'spot', delay: 0 },
+      { kind: def.id === 1 ? 'shield' : 'turret', count: 1, from: 'spot', delay: 0 },
       { kind: rnd.pick(def.enemyPool), count: 2, from: 'right', delay: 0.5 },
-      { kind: rnd.pick(def.flyerPool), count: 1, from: 'air', delay: 1.0 },
+      ...(def.flyerPool.length > 0
+        ? [{ kind: rnd.pick(def.flyerPool), count: 1, from: 'air' as const, delay: 1.0 }]
+        : []),
     ],
     done: false,
   });

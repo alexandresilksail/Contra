@@ -183,6 +183,17 @@ node tools/accept_stage1.mjs
 #   注：脚本开启 debug.invincible 仅防意外死亡；机器人卡住时会前移一格
 #   以保证截图完成——真实可通关性由 tests/traversal.test.ts 无头验证。
 
+# 纯跑动真实通关验证（无传送、无看门狗前移；2026-10-14 新增）
+#   修复 1 格台阶卡死（col 21→22，row 23→22 被当作墙）后：
+#   collision.ts 新增 autoStepUp()：X 扫描撞到孤立 1 格高台阶且头顶有空间时
+#   直接抬升 1 格越过（原作行为），wallAhead() 同步豁免以免 AI 在台阶前掉头。
+node verify_traversal.mjs
+#   实测：纯按住右+开火+自动跳，无任何传送 ——
+#   x=338 越过 col 21（旧卡死点）→ col 50 → Boss 门 col 100 →
+#   bossHp 100 → 0 → phase 'clear'；敌人种类全部为真实素材步兵
+#   （grunt/runner/heavy/sniper/shield/bomber/jumper/flame），
+#   mapImageActive=true，0 控制台错误。
+
 # 回归
 npx vitest run             # 137 项全通过
 npx tsc --noEmit

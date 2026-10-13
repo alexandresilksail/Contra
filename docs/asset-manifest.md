@@ -152,3 +152,22 @@ the procedural boss art for Stage 1's "BASE COMMANDER".
    pit-free floor. Everything past the gate — the ravine and the fortress
    wall — is exactly as extracted and never traversed. The old
    "level 176 → end" scheme is gone. See `docs/stage1-map-image.md` §5.
+5. **Stage-1 enemy pool restricted to real-sprite infantry (2026-10-14).**
+   Stage 1 spawns only the 8 infantry kinds that render from the
+   `players.png` red-commando column (`grunt, runner, heavy, sniper, shield,
+   bomber, jumper, flame` — `SOLDIER_KINDS` in `src/gfx/sprites.ts`). The
+   geometric kinds (`turret`, `flyer`, `mech`) have no uploaded art and are
+   excluded from every Stage-1 wave source in `buildWaves()`
+   (`src/level/stages.ts`): the per-mile air wave, the mid-boss (heavy
+   instead of mech), the final defensive line (shield instead of turret) and
+   the per-mile "spot turret" roll (infantry instead of turret for stage 1),
+   which previously leaked a procedural turret into Stage 1. Stages 2–8 keep
+   their procedural enemies by design (see item 1).
+6. **1-tile auto step-up in collision (2026-10-14).** `moveAndCollide()`
+   (`src/systems/collision.ts`) treated a lone 1-tile ledge (Stage 1 col
+   21→22, ground row 23→22) as a wall and stopped the player dead — a real
+   traversal blocker that earlier acceptance runs had masked with a
+   teleport watchdog. Fixed with an `autoStepUp()` climb (lift the body one
+   tile when the destination is clear) plus a `wallAhead()` exemption so AI
+   does not turn around at steps. Verified by a genuine no-teleport browser
+   run: the player runs from spawn to the boss gate and clears the stage.
