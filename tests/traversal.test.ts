@@ -143,24 +143,28 @@ describe('Phase 4: boss arenas are flat across all stages', () => {
       scene.start({ stage, chars: ['razor', 'razor'], twoPlayer: false, continueUsed: 0 });
       openBossDoor(scene.level); // remove the gate so only terrain is measured
       const s = scene.level.def;
-      // The boss descends onto the ground and the camera locks to one screen,
-      // so the arena needs one continuous fighting floor with no pits. Stage 1
-      // also has the fortress back wall in the arena, whose top is higher than
-      // the floor - that is a wall, not a step in the floor.
+      // The boss descends onto the ground and the camera locks to ONE screen
+      // (bossStart .. bossStart + VIEW_W/TILE columns), so only that window is
+      // the fight floor: one continuous strip with no pits. Stage 1's arena is
+      // a 40-column patch levelled to row 21 (the art there is rising jungle
+      // ground; a boss fight needs one flat strip), while the ravine and the
+      // fortress wall sit well outside it. This checks exactly the 40-col
+      // window the camera shows.
+      const arenaEnd = Math.min(s.tiles, s.bossStart + 40);
       const counts = new Map<number, number>();
-      for (let col = s.bossStart; col < s.tiles; col++) {
+      for (let col = s.bossStart; col < arenaEnd; col++) {
         const r = scene.level.groundRow(col);
         counts.set(r, (counts.get(r) ?? 0) + 1);
       }
       const [floor, cover] = [...counts.entries()].sort((a, b) => b[1] - a[1])[0];
-      const width = s.tiles - s.bossStart;
+      const width = arenaEnd - s.bossStart;
       expect(cover, `stage ${stage}: floor row ${floor} only covers ${cover}/${width}`)
         .toBeGreaterThanOrEqual(Math.floor(width * 0.7));
       // the floor is a real walkable row inside the level
       expect(floor).toBeGreaterThan(0);
       expect(floor).toBeLessThan(LEVEL_ROWS);
       // and nothing below it is ever a hole
-      for (let col = s.bossStart; col < s.tiles; col++) {
+      for (let col = s.bossStart; col < arenaEnd; col++) {
         for (let r = floor; r < LEVEL_ROWS; r++) {
           const t = scene.level.get(col, r);
           expect(t === T.EMPTY || t === T.WATER,

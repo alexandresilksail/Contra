@@ -31,15 +31,20 @@ export const S1_GROUND_RUNS: number[][] = [
   [22, 47, 22],
   [56, 65, 22],
   [74, 84, 22],
-  [85, 116, 21],
-  [117, 127, 22],
-  [128, 138, 21],
-  [139, 143, 23],
+  [85, 139, 21],
+  [140, 143, 23],
   [146, 151, 23],
   [154, 162, 25],
   [163, 163, 23],
   [164, 167, 21],
-  [170, 208, 23],
+  [170, 176, 23],
+  [177, 183, 25],
+  [186, 189, 27],
+  [192, 194, 24],
+  [195, 204, 23],
+  [205, 205, 25],
+  [206, 207, 26],
+  [208, 208, 27],
 ];
 // [colFrom, colTo, deckRow]
 export const S1_BRIDGE_RUNS: number[][] = [
@@ -59,11 +64,11 @@ export const S1_PIT_RUNS: number[][] = [
   [144, 145],
   [152, 153],
   [168, 169],
+  [184, 185],
+  [190, 191],
 ];
 // [col, rowTop, rowBottom] destructible weapon containers
 export const S1_SENSORS: number[][] = [
-  [103, 20, 20],
-  [115, 20, 20],
   [21, 22, 22],
   [79, 21, 21],
   [99, 20, 20],
@@ -71,6 +76,12 @@ export const S1_SENSORS: number[][] = [
 
 /** Deepest wade floor, so a player who falls in can always jump back out. */
 export const S1_WADE_CAP = 25;
+
+/** Walkable surface (top solid) row of a column, from the extracted ground runs. */
+function surfaceRow(col: number): number {
+  for (const [a, b, row] of S1_GROUND_RUNS) if (col >= a && col <= b) return row;
+  return GROUND_ROW;
+}
 
 /** Build the Stage-1 tile map from the layout extracted out of the map image. */
 export function stage1ImageMap(tiles: number, bossStart: number): Uint8Array {
@@ -114,8 +125,12 @@ export function stage1ImageMap(tiles: number, bossStart: number): Uint8Array {
     for (let r = r0; r <= r1; r++) set(c, r, T.HIDDEN);
   }
 
-  // 6) boss gate in front of the fortress wall art
-  for (let r = GROUND_ROW - 6; r < GROUND_ROW; r++) set(bossStart, r, T.DOOR);
+  // 6) boss gate at the arena entrance. The door stands ON the arena surface
+  //    (rows surface-6 .. surface-1) rather than at a fixed row: openBossDoor()
+  //    blanks the door tiles, so a door that also covered the floor row would
+  //    erase walkable ground and drop that column by one tile.
+  const doorRow = surfaceRow(bossStart);
+  for (let r = doorRow - 6; r < doorRow; r++) set(bossStart, r, T.DOOR);
 
   return data;
 }

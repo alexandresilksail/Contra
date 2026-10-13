@@ -430,7 +430,12 @@ export class GameScene {
     audio.sfx('door');
     const def = BOSS_DEFS[this.def.bossId] ?? BOSS_DEFS.commander;
     const left = this.level.bossArenaX();
-    const right = this.level.pixelW;
+    // The arena is exactly one screen wide (VIEW_W / TILE columns) ending at the
+    // gate, so the camera locks to a single screen and the boss is always in
+    // view. For Stage 1 the gate is placed before the ravine, so the arena
+    // stops well short of the chasms and the fortress wall.
+    const arenaCols = Math.floor(VIEW_W / TILE);
+    const right = Math.min(this.level.pixelW, (this.def.bossStart + arenaCols) * TILE);
     const b = new Boss(def, left + (right - left) / 2 - def.w / 2, 40);
     b.hp = this.def.bossHp;
     b.maxHp = this.def.bossHp;

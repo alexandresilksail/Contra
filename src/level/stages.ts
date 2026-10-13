@@ -69,8 +69,10 @@ export const STAGES: StageDef[] = [
     enemyPool: ['grunt', 'runner', 'turret'],
     flyerPool: ['flyer'],
     density: 1.5,
-    // the boss arena is the last full screen: 216*16 - VIEW_W(640) = 2816
-    bossStart: 176,
+    // Boss gate sits BEFORE the ravine (pits at cols 144-169). The arena is the
+    // single screen [100, 139]; the camera locks there, so the ravine and the
+    // fortress wall (209-215) are natural scenery the player never crosses.
+    bossStart: 100,
     bossId: 'commander',
     bossName: 'BASE COMMANDER',
     bossHp: 100,
@@ -242,12 +244,23 @@ export function stageDef(id: number): StageDef {
 export function buildWaves(def: StageDef): Wave[] {
   const waves: Wave[] = [];
   const rnd = rngFrom(def.seed * 31 + 7);
-  const usable = def.bossStart - 24;
-  // higher density => waves arrive more often
-  const spacing = Math.max(30, Math.round(72 - def.density * 13));
+  // usable playable span before the boss gate; clamped so short stages still
+  // get a few waves (the loop below scales to the stage length)
+  const usable = Math.max(60, def.bossStart - 24);
+  // higher density => waves arrive more often. Short stages (stage 1's gate
+  // sits early, before the ravine) get tighter spacing so they still deliver a
+  // full set of encounters; long stages keep the original cadence.
+  const spacing = Math.min(
+    Math.max(28, Math.round(72 - def.density * 13)),
+    Math.max(20, Math.round(usable * 0.28)),
+  );
+  // A wave fires once it passes cam.x + VIEW_W*0.75, so the first one has to
+  // sit beyond that or the whole opening wave is dumped on the spawn point
+  // (enemies spawn on top of the players and shove them around).
+  const startX = Math.max(34, Math.min(90, Math.round(usable * 0.32)));
   const midX = Math.floor(usable * 0.52);
 
-  for (let x = 90; x < usable; x += spacing) {
+  for (let x = startX; x < usable; x += spacing) {
     const t = x / usable; // 0..1 difficulty ramp
     const size = 2 + Math.floor(t * 2.4 + rnd() * 1.6);
     const entries: WaveEntry[] = [];

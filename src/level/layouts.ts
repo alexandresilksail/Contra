@@ -137,9 +137,14 @@ class MapBuilder {
  *   56-65    jungle island between the two bridges
  *   66-73    RIVER 2 - second bridge deck
  *   74-143   rising jungle ground with weapon-container panels in the rock
- *   144-191  ravine - bottomless chasms around a small island ledge
- *   192-215  final approach + fortress wall (boss arena back wall)
- *   176      fortress gate (DOOR); the arena is the last full screen
+ *   100      BOSS GATE (DOOR); the single-screen arena is [100,140], BEFORE
+ *            the ravine. That 40-col patch is levelled to row 21 (the art
+ *            there is rising/jagged ground; a boss fight needs one flat,
+ *            pit-free strip) - the only deliberate deviation from the image.
+ *   144-169  ravine - bottomless chasms (kept lethal; never crossed - the boss
+ *            is fought first and the level clears)
+ *   170-208  jungle ground (natural, row 23)
+ *   209-215  fortress wall (natural scenery past the boss gate)
  */
 export function stage1Map(def: StageDef): Uint8Array {
   return stage1ImageMap(def.tiles, def.bossStart);

@@ -104,9 +104,10 @@ describe('stage map image must stay locked to world coordinates', () => {
     // the fortress wall closes the right end of the level
     expect(S1_WALL_RUNS.length).toBe(1);
     expect(S1_WALL_RUNS[0][1]).toBe(215);
-    // the ravine chasms are kept as lethal pits, and none of them sits in the
-    // boss arena (which is levelled by the extractor)
+    // the ravine chasms are kept as lethal pits, and ALL of them sit to the
+    // RIGHT of the boss arena [bossStart(100), bossStart+40) = [100, 139], so
+    // the fight happens on natural jungle and the player never crosses them
     expect(S1_PIT_RUNS.length).toBeGreaterThan(0);
-    for (const [from, to] of S1_PIT_RUNS) expect(to).toBeLessThan(176);
+    for (const [from, to] of S1_PIT_RUNS) expect(from).toBeGreaterThanOrEqual(140);
   });
 });

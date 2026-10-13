@@ -47,15 +47,17 @@ GROUND_ROW = 22
 LEVEL_ROWS = 30
 WADE_CAP = GROUND_ROW + 3   # deepest wade floor (always jump-out-able)
 
-# The boss arena is the last full screen: 216*16 - VIEW_W(640) = 2816 -> col 176.
-# The art shows a ravine with bottomless chasms in that stretch, but a boss
-# fight needs one flat, pit-free strip (the boss descends onto the ground and
-# the camera locks to a single screen; tests/traversal.test.ts asserts it), so
-# the arena is levelled to the widest natural flat run in front of the fortress
-# wall. Everything to the LEFT of the gate - ravine included - stays exactly as
-# extracted from the art.
-BOSS_START = 176
-ARENA_ROW = 23
+# The boss gate sits BEFORE the ravine (pits at cols 144-169). The arena is
+# the single screen [BOSS_START, BOSS_START + ARENA_COLS) (40 cols == one
+# VIEW_W/TILE screen); the camera locks there, so the ravine (144+) and the
+# fortress wall (209-215) stay exactly as extracted from the art and are never
+# traversed.
+# The arena ground inside that window IS levelled, to the window's own modal
+# surface row: the art there is rising, jagged jungle ground (rows 21-24) and a
+# boss fight needs one flat, pit-free floor. This is the ONLY deliberate
+# deviation from the image, and it is confined to the arena.
+BOSS_START = 100
+ARENA_COLS = 40          # one screen: VIEW_W(640) / TILE(16)
 
 
 def close(c, t, tol=14):
@@ -269,15 +271,24 @@ def main():
             continue
         sensors.append([col, r0, r1])
 
-    # ---------------- boss arena levelling ----------------
-    # Verified: with the ravine left in place the boss can NOT be defeated
-    # (the fighter gets stuck between the chasms), which breaks the "the stage
-    # must be completable" requirement, so the arena is levelled.
-    for cx in range(BOSS_START, COLS):
-        if kind[cx] == 'wall':
-            continue
-        kind[cx] = 'ground'
-        surf[cx] = row_to_img_y(ARENA_ROW)
+    # ---------------- boss arena: one flat fighting floor ----------------
+    # The boss descends onto the ground and the camera locks to a single screen,
+    # so the 40-column arena window needs ONE continuous, pit-free floor. The
+    # art there is rising, jagged jungle ground, so the window is levelled to
+    # its own modal surface row (21). Confined to the arena: the ravine (144+)
+    # and the fortress wall (209+) keep their extracted values.
+    win = [c for c in range(BOSS_START, min(COLS, BOSS_START + ARENA_COLS))]
+    modal_row = Counter(
+        tile_row(surf[c]) for c in win if surf[c] is not None
+    ).most_common(1)[0][0]
+    for c in win:
+        kind[c] = 'ground'
+        surf[c] = row_to_img_y(modal_row)
+
+    # ---------------- boss gate placement ----------------
+    # The boss gate (DOOR) is emitted by stage1ImageMap at def.bossStart.
+    # Weapon containers (and their source boxes) are kept only up to the gate
+    # so none sit inside the boss arena.
     boxes = [b for b in boxes if round((b[0] + b[2] / 2) / TILE) < BOSS_START]
     sensors = [sn for sn in sensors if sn[0] < BOSS_START]
 
@@ -397,6 +408,12 @@ export const S1_IMG_TO_WORLD = {IMG_TO_WORLD};
 /** Deepest wade floor, so a player who falls in can always jump back out. */
 export const S1_WADE_CAP = {WADE_CAP};
 
+/** Walkable surface (top solid) row of a column, from the extracted ground runs. */
+function surfaceRow(col: number): number {{
+  for (const [a, b, row] of S1_GROUND_RUNS) if (col >= a && col <= b) return row;
+  return GROUND_ROW;
+}}
+
 /** Build the Stage-1 tile map from the layout extracted out of the map image. */
 export function stage1ImageMap(tiles: number, bossStart: number): Uint8Array {{
   const data = new Uint8Array(tiles * LEVEL_ROWS);
@@ -439,8 +456,12 @@ export function stage1ImageMap(tiles: number, bossStart: number): Uint8Array {{
     for (let r = r0; r <= r1; r++) set(c, r, T.HIDDEN);
   }}
 
-  // 6) boss gate in front of the fortress wall art
-  for (let r = GROUND_ROW - 6; r < GROUND_ROW; r++) set(bossStart, r, T.DOOR);
+  // 6) boss gate at the arena entrance. The door stands ON the arena surface
+  //    (rows surface-6 .. surface-1) rather than at a fixed row: openBossDoor()
+  //    blanks the door tiles, so a door that also covered the floor row would
+  //    erase walkable ground and drop that column by one tile.
+  const doorRow = surfaceRow(bossStart);
+  for (let r = doorRow - 6; r < doorRow; r++) set(bossStart, r, T.DOOR);
 
   return data;
 }}

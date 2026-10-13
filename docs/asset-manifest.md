@@ -126,11 +126,16 @@ the procedural boss art for Stage 1's "BASE COMMANDER".
 
 ---
 
-## 4. Open items (not guessed, not substituted)
+## 4. Open items (all decided with the user, 2026-10-13)
 
-1. **Stages 2–8 have no uploaded art.** Only Stage 1 has map/tile/boss images,
-   so stages 2–8 keep procedural art and hand-authored tile maps. No uploaded
-   asset has been stretched to cover them.
+1. **Stages 2–8 have no uploaded art — disposition confirmed.** Only Stage 1
+   has map/tile/boss images, so stages 2–8 keep their procedural per-stage
+   themes (`buildBackground(theme)` in `src/gfx/sprites.ts`) and hand-authored
+   tile maps (`src/level/layouts.ts`). No uploaded asset has been stretched to
+   cover them and no substitute art has been invented. If map art for stages
+   2–8 is uploaded later, the stage-1 pipeline
+   (`tools/stage1_extract.py` → extracted collision → world-locked image)
+   applies to them unchanged.
 2. **`players.png` pose bands** were confirmed by pixel probes (content
    bounding boxes, widths), not by a manual. Every cell listed above was
    measured; anything that could not be measured is documented as such rather
@@ -140,11 +145,10 @@ the procedural boss art for Stage 1's "BASE COMMANDER".
    fortress wall, weapon-container panels, boss gate) lives in
    `src/level/stage1ImageData.ts` as independent tile data on the same world
    grid. No pixel of the image is assumed to be solid.
-4. **Boss arena deviation (deliberate, documented).** The art shows a
-   bottomless ravine across the last screen. Left as-is the boss cannot be
-   defeated (the fighter gets stuck between the chasms — measured), which
-   breaks the "stage must be completable" requirement, so
-   `tools/stage1_extract.py` levels only the arena (`BOSS_START = 176` →
-   level end) to row 23, the widest natural flat run in front of the fortress
-   wall. Everything to the left of the gate — ravine included — is exactly as
-   extracted. See `docs/stage1-map-image.md`.
+4. **Boss arena deviation (deliberate, user-decided 2026-10-13).** The boss
+   gate moved BEFORE the ravine (`BOSS_START = 100`): the single-screen arena
+   `[100, 140)` is levelled to its own modal surface row (21) because the art
+   there is rising, jagged jungle ground and a boss fight needs one flat,
+   pit-free floor. Everything past the gate — the ravine and the fortress
+   wall — is exactly as extracted and never traversed. The old
+   "level 176 → end" scheme is gone. See `docs/stage1-map-image.md` §5.

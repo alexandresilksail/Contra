@@ -24,3 +24,7 @@ npm-debug.log*
 Thumbs.db
 .idea/
 .vscode/
+
+# local tooling artifacts
+tools/__pycache__/
+vite.config.ts.timestamp-*.mjs
