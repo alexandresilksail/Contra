@@ -13,9 +13,13 @@ export const T = {
 
 export type TileId = (typeof T)[keyof typeof T];
 
-/** Tiles that fully block movement. */
+/** Tiles that fully block movement.
+ *  HIDDEN is intentionally NOT blocking: weapon pods are shot to reveal a
+ *  bonus but never act as a solid wall (matches the original game, where you
+ *  run/stroll straight through a pod you choose not to shoot). They remain
+ *  destructible by bullets (see isDestructible). */
 export function isBlocking(t: number): boolean {
-  return t === T.SOLID || t === T.CRATE || t === T.DOOR || t === T.HIDDEN;
+  return t === T.SOLID || t === T.CRATE || t === T.DOOR;
 }
 
 /** Tiles that block only when the body is falling and was above them. */

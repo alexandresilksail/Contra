@@ -2,10 +2,27 @@ import { describe, expect, it } from 'vitest';
 import { bgOriginX, bgOriginY, bgScrollFactors, bgShiftForCamera } from '../src/gfx/bgLayer';
 import type { BgLayer } from '../src/gfx/sprites';
 import { GROUND_ROW, TILE } from '../src/config/constants';
+import {
+  S1_BRIDGE_RUNS,
+  S1_GROUND_RUNS,
+  S1_IMG_TO_WORLD,
+  S1_PIT_RUNS,
+  S1_WALL_RUNS,
+} from '../src/level/stage1ImageData';
 
-/** The Stage-1 map image is 3456x245; the bottom 5 rows are a white border. */
+/**
+ * Geometry of the uploaded Stage-1 map image (public/sprites/stage1bg.png).
+ * The level art itself is rows 8..223; rows 0..7 are a black margin and rows
+ * 224..244 carry the ripper watermark. Only the content band is ever drawn.
+ */
 const MAP_IMG_W = 3456;
-const MAP_IMG_H = 240;
+const MAP_IMG_Y0 = 8;
+const MAP_IMG_Y1 = 224;
+/** world y of image row 0; measured so the walkable grass line (img y~99) sits
+ *  exactly on GROUND_ROW*TILE (see tools/stage1_extract.py). */
+const MAP_IMG_TO_WORLD = 253;
+/** world y the renderer places the (cropped) strip at. */
+const MAP_WORLD_Y = MAP_IMG_TO_WORLD + MAP_IMG_Y0;
 
 function layer(o: Partial<BgLayer> & { speed: number }): BgLayer {
   return {
@@ -49,18 +66,47 @@ describe('stage map image must stay locked to world coordinates', () => {
   });
 
   it('locked vertical origin tracks the camera exactly', () => {
-    const l = layer({ speed: 1, lock: true, y: 112 });
-    expect(bgOriginY(l, 0)).toBe(112);
-    expect(bgOriginY(l, 40)).toBe(72);
-    expect(bgOriginY(l, 120)).toBe(-8);
+    const l = layer({ speed: 1, lock: true, y: MAP_WORLD_Y });
+    expect(bgOriginY(l, 0)).toBe(MAP_WORLD_Y);
+    expect(bgOriginY(l, 40)).toBe(MAP_WORLD_Y - 40);
+    expect(bgOriginY(l, 120)).toBe(MAP_WORLD_Y - 120);
   });
 
-  it('the map image bottom edge lands exactly on the ground surface line', () => {
-    // worldY chosen by packStage1Bg(): image row 0 goes here, so the strip's
-    // bottom edge == the top of the ground row == where the player stands.
-    const worldY = GROUND_ROW * TILE - MAP_IMG_H;
-    expect(worldY).toBe(112);
-    expect(worldY + MAP_IMG_H).toBe(GROUND_ROW * TILE);
+  it('the walkable grass line of the art lands on the ground row', () => {
+    // packStage1Bg() crops rows 8..224 and places that strip at MAP_WORLD_Y, so
+    // image row y is drawn at world y + MAP_IMG_TO_WORLD. The measured grass
+    // line (img y ~= 99) must therefore map onto GROUND_ROW*TILE.
+    const GRASS_IMG_Y = 99;
+    expect(GRASS_IMG_Y + MAP_IMG_TO_WORLD).toBe(GROUND_ROW * TILE);
     expect(GROUND_ROW * TILE).toBe(352);
+    // the strip covers world rows 16..29 - never the watermark band
+    expect(MAP_IMG_Y1 + MAP_IMG_TO_WORLD).toBeLessThanOrEqual(30 * TILE);
+    expect(MAP_IMG_Y0 + MAP_IMG_TO_WORLD).toBeGreaterThan(15 * TILE);
+  });
+
+  it('every extracted ground surface row is a real tile row', () => {
+    for (const [from, to, row] of S1_GROUND_RUNS) {
+      expect(row).toBeGreaterThan(0);
+      expect(row).toBeLessThan(30);
+      expect(to).toBeGreaterThanOrEqual(from);
+      // the image is 216 columns wide; no run may run past it
+      expect(to).toBeLessThan(216);
+    }
+    // the spawn corridor is present
+    const spawn = S1_GROUND_RUNS.find(([f, t]) => f <= 2 && t >= 2);
+    expect(spawn).toBeDefined();
+    // the two river bridges from the art are decks at grade
+    expect(S1_BRIDGE_RUNS.length).toBe(2);
+    for (const [from, , row] of S1_BRIDGE_RUNS) {
+      expect([48, 66]).toContain(from);
+      expect(row).toBe(GROUND_ROW);
+    }
+    // the fortress wall closes the right end of the level
+    expect(S1_WALL_RUNS.length).toBe(1);
+    expect(S1_WALL_RUNS[0][1]).toBe(215);
+    // the ravine chasms are kept as lethal pits, and none of them sits in the
+    // boss arena (which is levelled by the extractor)
+    expect(S1_PIT_RUNS.length).toBeGreaterThan(0);
+    for (const [from, to] of S1_PIT_RUNS) expect(to).toBeLessThan(176);
   });
 });

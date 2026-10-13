@@ -506,8 +506,21 @@ export function packBossWall(): { sprite: Sprite; scale: number } | null {
 /* stage 1 background                                                  */
 /* ------------------------------------------------------------------ */
 
-/** The Stage-1 panorama is 3456x245; the last 5 rows are a white border. */
-const BG1_H = 240;
+/**
+ * Stage-1 panorama geometry (public/sprites/stage1bg.png, 3456x245):
+ *
+ *   rows   0..7    black margin (never drawn)
+ *   rows   8..223  the level art itself - the WHOLE stage-1 layout
+ *   rows 224..244  white margin carrying the ripper watermark (never drawn)
+ *
+ * The strip is cropped to the content band only and placed at a WORLD Y such
+ * that the walkable grass line of the art lands exactly on GROUND_ROW*TILE.
+ * `BG1_IMG_TO_WORLD` was measured off the art: the grass line sits at img
+ * y ~= 99, and 99 + 253 = 352 = GROUND_ROW * TILE.
+ */
+const BG1_Y0 = 8;
+const BG1_Y1 = 224;
+const BG1_IMG_TO_WORLD = 253;
 
 /**
  * Stage 1 scrolling background. Returns the panorama strip plus a `sky`
@@ -530,9 +543,10 @@ export interface Stage1Bg {
 export function packStage1Bg(): Stage1Bg | null {
   const img = images.stage1bg;
   if (!img) return null;
-  const sprite = slice(img, [0, 0, img.width, BG1_H], 1);
-  // bottom edge of the strip == top of the ground row, in world coordinates
-  const worldY = GROUND_ROW * TILE - sprite.height;
+  // content band only: the black margin above and the watermark below are cut
+  const sprite = slice(img, [0, BG1_Y0, img.width, BG1_Y1 - BG1_Y0], 1);
+  // image row BG1_Y0 is placed at world y = BG1_IMG_TO_WORLD + BG1_Y0
+  const worldY = BG1_IMG_TO_WORLD + BG1_Y0;
   // dominant color of the top rows -> seamless sky fill above the strip
   let top = '#04070f';
   const g = ctxOf(sprite);

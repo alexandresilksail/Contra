@@ -67,6 +67,9 @@ export class GameScene {
   theme = THEMES.base;
   tileArt!: TileArt;
   bg!: { sky: HTMLCanvasElement; layers: BgLayer[] };
+  /** true when the uploaded Stage-1 map image is the level visual (1:1), so
+   *  terrain tiles are not painted over it. */
+  mapImageActive = false;
 
   phase: 'intro' | 'play' | 'boss' | 'clear' | 'over' = 'intro';
   phaseT = 0;
@@ -125,6 +128,7 @@ export class GameScene {
       }
       const pb = packStage1Bg();
       if (pb) {
+        this.mapImageActive = true;
         this.bg = {
           sky: pb.sky,
           // world-locked: speed 1 is implied by `lock`, and `y` is a WORLD
@@ -764,6 +768,14 @@ export class GameScene {
       for (let ty = ty0; ty <= ty1; ty++) {
         const t = this.level.get(tx, ty);
         if (t === T.EMPTY) continue;
+        // Stage 1 draws the uploaded map image 1:1 as the level visual, so the
+        // terrain the picture already shows must NOT be painted a second time
+        // with tile art - that would cover the original art. Only objects the
+        // picture does not carry (the boss gate, crates, spikes, ladders,
+        // ledges) are still drawn here.
+        if (this.mapImageActive && (t === T.SOLID || t === T.WATER || t === T.HIDDEN)) {
+          continue;
+        }
         const px = tx * TILE - camX;
         const py = ty * TILE - camY;
         switch (t) {

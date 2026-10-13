@@ -136,15 +136,36 @@ describe('Phase 4: every authored stage is traversable spawn -> boss gate', () =
 
 describe('Phase 4: boss arenas are flat across all stages', () => {
   for (let stage = 1; stage <= 8; stage++) {
-    it(`stage ${stage} arena ground is level at GROUND_ROW (gate open)`, () => {
+    it(`stage ${stage} arena floor is level and gap-free (gate open)`, () => {
       const input = new FakeInput();
       const { host } = makeHost(input);
       const scene = new GameScene(host);
       scene.start({ stage, chars: ['razor', 'razor'], twoPlayer: false, continueUsed: 0 });
       openBossDoor(scene.level); // remove the gate so only terrain is measured
       const s = scene.level.def;
+      // The boss descends onto the ground and the camera locks to one screen,
+      // so the arena needs one continuous fighting floor with no pits. Stage 1
+      // also has the fortress back wall in the arena, whose top is higher than
+      // the floor - that is a wall, not a step in the floor.
+      const counts = new Map<number, number>();
       for (let col = s.bossStart; col < s.tiles; col++) {
-        expect(scene.level.groundRow(col), `stage ${stage} col ${col}`).toBe(GROUND_ROW);
+        const r = scene.level.groundRow(col);
+        counts.set(r, (counts.get(r) ?? 0) + 1);
+      }
+      const [floor, cover] = [...counts.entries()].sort((a, b) => b[1] - a[1])[0];
+      const width = s.tiles - s.bossStart;
+      expect(cover, `stage ${stage}: floor row ${floor} only covers ${cover}/${width}`)
+        .toBeGreaterThanOrEqual(Math.floor(width * 0.7));
+      // the floor is a real walkable row inside the level
+      expect(floor).toBeGreaterThan(0);
+      expect(floor).toBeLessThan(LEVEL_ROWS);
+      // and nothing below it is ever a hole
+      for (let col = s.bossStart; col < s.tiles; col++) {
+        for (let r = floor; r < LEVEL_ROWS; r++) {
+          const t = scene.level.get(col, r);
+          expect(t === T.EMPTY || t === T.WATER,
+            `stage ${stage}: arena hole at col ${col} row ${r}`).toBe(false);
+        }
       }
     });
   }

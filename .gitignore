@@ -8,10 +8,12 @@ dist/
 public/sprites/
 
 # analysis artefacts derived from the sprite pack (same rule: never commit)
-# - tools/*.png are contact sheets cropped straight out of the sheets
+# - tools/*.png are contact sheets / verification crops straight out of the sheets
 # - tools/frames.json holds measured bounding boxes of the same frames
+# - tools/stage1_layout.json is the raw measurement dump of stage1ImageData.ts
 tools/*.png
 tools/frames.json
+tools/stage1_layout.json
 
 # logs
 *.log

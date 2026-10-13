@@ -58,7 +58,9 @@ export const STAGES: StageDef[] = [
     subtitle: 'FORTRESS GATE',
     theme: 'base',
     seed: 101,
-    tiles: 300,
+    // 216 columns == the exact width of the uploaded map image (3456px / 16),
+    // which is the level layout itself and is drawn 1:1 by the renderer.
+    tiles: 216,
     terrain: 0.4,
     pitChance: 0.22,
     water: 0.1,
@@ -67,7 +69,8 @@ export const STAGES: StageDef[] = [
     enemyPool: ['grunt', 'runner', 'turret'],
     flyerPool: ['flyer'],
     density: 1.5,
-    bossStart: 252,
+    // the boss arena is the last full screen: 216*16 - VIEW_W(640) = 2816
+    bossStart: 176,
     bossId: 'commander',
     bossName: 'BASE COMMANDER',
     bossHp: 100,

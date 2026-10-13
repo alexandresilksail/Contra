@@ -21,6 +21,7 @@
 import { CHUNK_TILES, GROUND_ROW, LEVEL_ROWS } from '../config/constants';
 import { T } from './tiles';
 import type { StageDef } from './stages';
+import { stage1ImageMap } from './stage1ImageData';
 
 class MapBuilder {
   data: Uint8Array;
@@ -121,73 +122,27 @@ class MapBuilder {
 }
 
 /**
- * Stage 1 — "FORTRESS GATE" (faithful jungle opening).
- * Column plan (300 columns, ground surface at row 22):
+ * Stage 1 - "FORTRESS GATE".
  *
- *   0-40     flat spawning corridor (deliberately clear of obstacles)
- *   45       weapon sensor (destructible HIDDEN wall hiding a bonus)
- *   41-50    approach
- *   51-67    RIVER 1: deck 51-60, gap 61-62 (2), deck 63-67 over water
- *   68-80    flat; wall-turret plateau 74-80 (2 tiles up, jump to engage)
- *   80-96    RIVER 2: deck 80-89, gap 90-91 (2), deck 92-96 over water
- *   97-110   flat; sniper plateau 104-110 (2 tiles up)
- *   111-140  ground-cannon field, crate cover
- *   141-244  rolling jungle: flat + 2-tile pits + crates
- *   245-299  final approach + boss arena (flat)
- *   252      fortress gate (DOOR, boss door)
+ * The collision data is EXTRACTED from the uploaded map image
+ * (public/sprites/stage1bg.png) by tools/stage1_extract.py. The image IS the
+ * complete level layout and is drawn 1:1, world-locked, by the renderer, so
+ * this module is the independent interactive authority on the same 16px grid
+ * (see src/level/stage1ImageData.ts).
+ *
+ * Structure read out of the art (216 columns):
+ *   0-1      water at the level lip
+ *   2-47     jungle cliff corridor (spawn; flat and clear so the gun fires)
+ *   48-55    RIVER 1 - metal bridge deck at grade over water
+ *   56-65    jungle island between the two bridges
+ *   66-73    RIVER 2 - second bridge deck
+ *   74-143   rising jungle ground with weapon-container panels in the rock
+ *   144-191  ravine - bottomless chasms around a small island ledge
+ *   192-215  final approach + fortress wall (boss arena back wall)
+ *   176      fortress gate (DOOR); the arena is the last full screen
  */
 export function stage1Map(def: StageDef): Uint8Array {
-  const b = new MapBuilder(def.tiles);
-  const G = GROUND_ROW;
-
-  /* 1) Spawn cliff corridor — keep clear so the gun demonstrably fires */
-  b.flat(0, 40);
-
-  /* 2) Weapon sensor in the cliff wall (shoot it to reveal a bonus) */
-  b.flat(41, 50);
-  b.sensor(45);
-
-  /* 3) River crossing 1 — at-grade bridge, one jumpable gap */
-  b.pit(51, 67);
-  b.deck(51, 60, G);
-  b.deck(63, 67, G);
-
-  /* 4) Flat run + wall-turret ledge (2-tile plateau, jump up) */
-  b.flat(68, 80);
-  b.flat(74, 80, G - 2);
-
-  /* 5) River crossing 2 — second bridge over the water */
-  b.pit(80, 96);
-  b.deck(80, 89, G);
-  b.deck(92, 96, G);
-
-  /* 6) Waterfall / sniper rise (raised plateau hiding riflemen) */
-  b.flat(97, 110);
-  b.flat(104, 110, G - 2);
-
-  /* 7) Ground-cannon field with crate cover */
-  b.flat(111, 140);
-  b.crate(115, 1);
-  b.crate(125, 2);
-  b.crate(135, 1);
-
-  /* 8) Rolling jungle — repeating flat runs, jumpable pits, crate cover */
-  for (let base = 141; base < 220; base += 26) {
-    b.flat(base, base + 25);
-    b.pit(base + 9, base + 10);
-    b.pit(base + 18, base + 19);
-    b.crate(base + 5, 1);
-    b.crate(base + 14, 1);
-  }
-
-  /* 9) Final approach + boss arena (flat, clear of pits) */
-  b.flat(245, def.tiles - 1);
-
-  /* fortress gate (boss door) */
-  const gate = def.bossStart;
-  for (let row = G - 6; row < G; row++) b.set(gate, row, T.DOOR);
-
-  return b.data;
+  return stage1ImageMap(def.tiles, def.bossStart);
 }
 
 /* ------------------------------------------------------------------ */
