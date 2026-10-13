@@ -303,6 +303,12 @@ export class Player {
       this.kill(w, 'spike');
       return;
     }
+    /* --- drowning: Stage-1 water is lethal on contact, like the original --- */
+    if (level.deadlyWater &&
+        (level.waterAt(cx, this.y + this.h * 0.5) || level.waterAt(cx, this.y + this.h - 2))) {
+      this.kill(w, 'water');
+      return;
+    }
 
     /* --- aim --- */
     let ax = 0;
@@ -528,8 +534,11 @@ export function updatePlayerBullets(w: WorldCtx, dt: number): void {
     updateBullet(b, dt);
     if (b.dead) continue;
     if (w.level.solidAt(b.x, b.y)) {
+      // Explosive ordnance detonates on impact (this is what lets the player
+      // blow a hole in a Stage-1 bridge deck); plain rounds just spark out.
+      if (b.explode > 0) w.explode(b.x, b.y, b.explode, b.dmg);
+      else w.particles.burst(b.x, b.y, 3, [PAL.yellow, PAL.grey], 40, 0.15);
       b.dead = true;
-      w.particles.burst(b.x, b.y, 3, [PAL.yellow, PAL.grey], 40, 0.15);
     }
   }
   w.pbullets.sweep((b) => b.dead);

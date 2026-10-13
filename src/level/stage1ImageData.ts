@@ -13,9 +13,12 @@
  *
  * Structures per 16px column:
  *   S1_GROUND_RUNS  [from, to, surfaceRow] rock/grass mass -> SOLID down
- *   S1_BRIDGE_RUNS  [from, to, deckRow]     metal bridge deck -> SOLID
+ *   S1_BRIDGE_RUNS  [from, to, deckRow]     metal bridge deck -> BRIDGE
+ *                                           (destructible by explosions);
+ *                                           the river below it is WATER
  *   S1_WALL_RUNS    [from, to, topRow]      fortress wall -> SOLID mass
- *   S1_WATER_RUNS   [from, to, floorRow]    water body -> wade, capped floor
+ *   S1_WATER_RUNS   [from, to, floorRow]    water body -> wade data; lethal in
+ *                                           stage 1 via Level.deadlyWater
  *   S1_PIT_RUNS     [from, to]              bottomless chasm -> lethal fall
  *   S1_SENSORS      [col, rowTop, rowBottom] weapon containers -> HIDDEN
  */
@@ -107,12 +110,17 @@ export function stage1ImageMap(tiles: number, bossStart: number): Uint8Array {
     }
   }
 
-  // 3) ground masses + bridge decks
+  // 3) ground masses + bridge decks. A bridge is ONE deck row of destructible
+  //    BRIDGE tiles with the river (WATER) below it: explosions blow the deck
+  //    open and whatever falls in drowns (Level.deadlyWater), like the original.
   for (const [a, b, row] of S1_GROUND_RUNS) {
     for (let c = a; c <= b; c++) for (let r = row; r < LEVEL_ROWS; r++) set(c, r, T.SOLID);
   }
   for (const [a, b, row] of S1_BRIDGE_RUNS) {
-    for (let c = a; c <= b; c++) for (let r = row; r < LEVEL_ROWS; r++) set(c, r, T.SOLID);
+    for (let c = a; c <= b; c++) {
+      set(c, row, T.BRIDGE);
+      for (let r = row + 1; r < LEVEL_ROWS; r++) set(c, r, T.WATER);
+    }
   }
 
   // 4) fortress wall (boss arena back wall)

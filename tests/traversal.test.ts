@@ -67,7 +67,20 @@ const FIXED = 1 / 60;
 function botStep(scene: GameScene, input: FakeInput): void {
   const p = scene.players[0];
   input.heldState.right = true;
-  input.heldState.shoot = true;
+
+  // Do NOT fire while standing on - or approaching - a Stage-1 bridge deck:
+  // explosive rounds detonate on the deck and blow holes in the bot's own path
+  // (faithful to the game - a careless player drowns in the river - but this
+  // bot is here to prove the TERRAIN is completable, not to bomb bridges).
+  const feetCol = Math.floor((p.x + p.w / 2) / TILE);
+  const onBridge = scene.level.get(feetCol, Math.floor((p.y + p.h + 2) / TILE)) === T.BRIDGE;
+  let bridgeNear = onBridge;
+  if (!bridgeNear) {
+    for (let c = feetCol + 1; c <= feetCol + 6 && c < scene.level.tilesX; c++) {
+      if (scene.level.get(c, GROUND_ROW) === T.BRIDGE) { bridgeNear = true; break; }
+    }
+  }
+  input.heldState.shoot = !bridgeNear;
 
   let wantJump = false;
   if (p.onGround) {

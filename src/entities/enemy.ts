@@ -200,7 +200,11 @@ export function updateEnemy(e: Enemy, dt: number, w: WorldCtx): void {
 
   if (e.state === 'death') {
     e.vy += GRAVITY * dt;
-    if (!e.flying) moveAndCollide(e as any, w.level, dt, { oneWay: true });
+    // Dying enemies fall THROUGH bridge decks and drop below the screen,
+    // exactly like the original ("enemies on bridges ... fall below the
+    // screen" - ripper note on the Stage-1 map sheet). Normal ground still
+    // catches them.
+    if (!e.flying) moveAndCollide(e as any, w.level, dt, { oneWay: true, passDecks: true });
     e.y += (e.flying ? 90 : 0) * dt;
     if (e.stateT > 0.5) e.dead = true;
     return;

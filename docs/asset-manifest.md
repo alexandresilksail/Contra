@@ -171,3 +171,28 @@ the procedural boss art for Stage 1's "BASE COMMANDER".
    tile when the destination is clear) plus a `wallAhead()` exemption so AI
    does not turn around at steps. Verified by a genuine no-teleport browser
    run: the player runs from spawn to the boss gate and clears the stage.
+7. **Reference-video version conflict (2026-10-13, reported to the user).**
+   The user designated B 站 BV1mGkcBHEMi as the sole Stage-1 reference.
+   Metadata (Bilibili web API): 2 parts / 2 h 13 min / 1080p, title
+   "难度超高的魂斗罗版本！魂斗罗经典版 Contra Classic Edition
+   二周目全关卡通关流程", UP 主 -轻云飘-, published 2026-01-15. Per the
+   UP's own description it is a **Unity fan remake (author LEOMEº), 2nd
+   loop**, "与红白机版本不一样……敌人则是增加了一些机制" — NOT the FC/NES
+   original this project replicates from ripped NES assets. This
+   environment **cannot decode video**, so no frame-by-frame analysis was
+   or will be claimed; NES-original behaviours that could not be verified
+   from the uploaded assets are marked 待确认 instead of guessed.
+8. **Stage-1 water + bridge deep restore (2026-10-13).** (a) Water is now
+   **lethal on contact** (drowning) in Stage 1 — including the river that
+   the extractor previously filled with SOLID rock under both bridge decks
+   and the water lip at cols 0-1 (`Level.deadlyWater`, stage-1 only;
+   stages 2-8 keep their wadeable notch water). (b) Bridge decks are a new
+   destructible tile `T.BRIDGE`: one plank per blast (`explodeAt()`), the
+   river below stays WATER, so a careless blast drops you in and you
+   drown. (c) Dying enemies fall THROUGH bridge decks and below the screen
+   (`passDecks` in `moveAndCollide()`), matching the ripper note printed on
+   `stage1bg.png` ("Enemies on bridges and machines fall below the
+   screen"). (d) The boss fight now switches to a **distinct original
+   boss-battle composition** (`TRACKS[8]`, `StageDef.bossMusic`) instead of
+   merely speeding the stage track up by 6 %; Konami's boss BGM cannot be
+   shipped (copyright). Regenerated via `tools/stage1_extract.py`.

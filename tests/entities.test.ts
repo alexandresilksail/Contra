@@ -37,6 +37,7 @@ function makeWorld(): WorldCtx {
       initEnemy(e, kind, x, y, facing);
       return e;
     },
+    explode: () => {},
     boss: null,
     bossActive: false,
   };

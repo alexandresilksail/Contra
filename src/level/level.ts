@@ -19,6 +19,9 @@ export class Level {
   private authored: Uint8Array | null = null;
   private authoredViews = new Map<number, Uint8Array>();
   doorOpen = false;
+  /** Stage 1 water is lethal on contact (drowning), like the original game.
+   *  Stages 2-8 keep their wadeable notch water. */
+  deadlyWater = false;
   /** destructible tiles that were destroyed (key = ty * tilesX + tx) */
   destroyed = new Set<number>();
 
@@ -27,6 +30,7 @@ export class Level {
     this.pixelW = def.tiles * TILE;
     this.pixelH = LEVEL_ROWS * TILE;
     this.chunkCount = Math.ceil(def.tiles / CHUNK_TILES);
+    this.deadlyWater = def.deadlyWater === true;
     if (def.layout) {
       // authored maps arrive row-major (stride = tilesX); convert to the
       // chunk layout Level.get() expects: 16-col blocks, row stride CHUNK_TILES

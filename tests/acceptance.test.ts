@@ -347,6 +347,10 @@ describe('Phase 6: two-player input is independent', () => {
     // drive them in opposite directions through the *host* input surface
     const x1a = p1.x;
     const x2a = p2.x;
+    // P2's left run reaches the lethal water at the level lip (cols 0-1) and
+    // drowns, then respawns at the spawn point - so track how far LEFT it
+    // actually got instead of the final position.
+    let p2LeftMost = x2a;
     for (let f = 0; f < 90; f++) {
       input.heldState.right = true;
       input.heldState.left = false;
@@ -354,10 +358,11 @@ describe('Phase 6: two-player input is independent', () => {
       (input as any).held = (i: number, a: string) => (a === 'right' ? i === 0 : a === 'left' ? i === 1 : false);
       scene.update(FIXED);
       scene.draw(ctx);
+      p2LeftMost = Math.min(p2LeftMost, p2.x);
       input.clearEdges();
     }
     const p1Moved = p1.x - x1a;
-    const p2Moved = p2.x - x2a;
+    const p2Moved = p2LeftMost - x2a;
     expect(p1Moved, 'P1 should move right').toBeGreaterThan(4);
     expect(p2Moved, 'P2 should move left').toBeLessThan(-4);
   });

@@ -45,6 +45,10 @@ export interface StageDef {
   bossName: string;
   bossHp: number;
   music: number;
+  /** distinct boss-battle track index; falls back to `music` when unset */
+  bossMusic?: number;
+  /** water is lethal on contact (drowning) instead of wadeable */
+  deadlyWater?: boolean;
   /** forced-scroll section: [startTile, endTile, speedPxPerSec] */
   scroll?: [number, number, number];
   /** hand-authored tile map (returns the full column-major grid); skips procgen */
@@ -81,6 +85,12 @@ export const STAGES: StageDef[] = [
     bossName: 'BASE COMMANDER',
     bossHp: 100,
     music: 0,
+    // Stage 1 deep restoration: a distinct boss-battle theme (original
+    // composition - Konami's boss BGM cannot be used) instead of just
+    // speeding up the stage track, and lethal water (drowning) like the
+    // original, including the river under the two bridges.
+    bossMusic: 8,
+    deadlyWater: true,
     layout: stage1Map,
   },
   {

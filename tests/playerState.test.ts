@@ -41,6 +41,7 @@ function makeWorld(level: Level): WorldCtx {
     nearestPlayer: () => null,
     spawnPickup: () => {},
     spawnEnemy: () => null,
+    explode: () => {},
     boss: null,
     bossActive: false,
   };

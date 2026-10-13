@@ -5,10 +5,11 @@ export const T = {
   PLATFORM: 2, // one-way: solid only when falling onto it from above
   LADDER: 3,
   SPIKE: 4, // hazard
-  WATER: 5, // slow + low damage
+  WATER: 5, // wading water by default; lethal on stages with Level.deadlyWater
   CRATE: 6, // destructible
   DOOR: 7, // boss gate (solid until opened)
   HIDDEN: 8, // destructible wall hiding a bonus
+  BRIDGE: 9, // destructible metal deck over water (Stage 1 river crossings)
 } as const;
 
 export type TileId = (typeof T)[keyof typeof T];
@@ -19,7 +20,7 @@ export type TileId = (typeof T)[keyof typeof T];
  *  run/stroll straight through a pod you choose not to shoot). They remain
  *  destructible by bullets (see isDestructible). */
 export function isBlocking(t: number): boolean {
-  return t === T.SOLID || t === T.CRATE || t === T.DOOR;
+  return t === T.SOLID || t === T.CRATE || t === T.DOOR || t === T.BRIDGE;
 }
 
 /** Tiles that block only when the body is falling and was above them. */
@@ -40,5 +41,5 @@ export function isLadder(t: number): boolean {
 }
 
 export function isDestructible(t: number): boolean {
-  return t === T.CRATE || t === T.HIDDEN;
+  return t === T.CRATE || t === T.HIDDEN || t === T.BRIDGE;
 }

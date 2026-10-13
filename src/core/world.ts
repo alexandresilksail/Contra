@@ -33,6 +33,8 @@ export interface WorldCtx {
   nearestPlayer(x: number, y: number): Player | null;
   spawnPickup(x: number, y: number, kind: string, weapon?: string): void;
   spawnEnemy(kind: string, x: number, y: number, facing?: 1 | -1): Enemy | null;
+  /** explosion at a world point: damages entities and destroys breakable tiles */
+  explode(x: number, y: number, radius: number, dmg: number): void;
   boss: Boss | null;
   bossActive: boolean;
 }

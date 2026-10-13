@@ -101,6 +101,7 @@ export class GameScene {
       nearestPlayer: (x, y) => this.nearestPlayer(x, y),
       spawnPickup: (x, y, kind, weapon) => this.spawnPickup(x, y, kind as any, weapon as WeaponId),
       spawnEnemy: (kind, x, y, facing) => this.spawnEnemy(kind, x, y, facing),
+      explode: (x, y, radius, dmg) => this.explodeAt(x, y, radius, dmg),
       boss: null,
       bossActive: false,
     };
@@ -448,7 +449,9 @@ export class GameScene {
     this.phase = 'boss';
     this.cam.lock = [left, Math.max(left, right - VIEW_W)];
     for (const w of this.waves) w.done = true;
-    audio.setIntensity(1.06);
+    // distinct boss-battle music (original composition) instead of merely
+    // speeding up the stage track; falls back to the stage track.
+    audio.playTrack(this.def.bossMusic ?? this.def.music);
   }
 
   private onBossDefeated(): void {
@@ -595,14 +598,21 @@ export class GameScene {
       const d = Math.hypot(this.boss.x + this.boss.w / 2 - x, this.boss.y + this.boss.h / 2 - y);
       if (d < radius + this.boss.w / 2) damageBoss(this.boss, dmg * 0.7, this.world, x, y, true);
     }
-    // blow up crates near the blast
-    const r = Math.ceil(radius / TILE);
+    // blow up crates and bridge decks near the blast (Stage-1 bridges are
+    // destructible by explosions - the deck is blown open and the river below
+    // is lethal, exactly like the original). A blast removes ONE plank
+    // section (its own column): a hole you jump, never an erased bridge.
+    const tr = Math.max(1, Math.round(radius / TILE) - 1);
     const cx = Math.floor(x / TILE);
     const cy = Math.floor(y / TILE);
-    for (let ty = cy - r; ty <= cy + r; ty++)
-      for (let tx = cx - r; tx <= cx + r; tx++) {
+    for (let ty = cy - tr; ty <= cy + tr; ty++)
+      for (let tx = cx - tr; tx <= cx + tr; tx++) {
         const t = this.level.get(tx, ty);
         if (t === T.CRATE) this.level.destroyTile(tx, ty);
+        else if (t === T.BRIDGE && tx === cx) {
+          this.level.destroyTile(tx, ty);
+          this.particles.burst(tx * TILE + 8, ty * TILE + 8, 8, [PAL.steel, PAL.white, PAL.orange], 120, 0.4, 260);
+        }
       }
   }
 
@@ -778,7 +788,7 @@ export class GameScene {
         // with tile art - that would cover the original art. Only objects the
         // picture does not carry (the boss gate, crates, spikes, ladders,
         // ledges) are still drawn here.
-        if (this.mapImageActive && (t === T.SOLID || t === T.WATER || t === T.HIDDEN)) {
+        if (this.mapImageActive && (t === T.SOLID || t === T.WATER || t === T.HIDDEN || t === T.BRIDGE)) {
           continue;
         }
         const px = tx * TILE - camX;
@@ -803,6 +813,10 @@ export class GameScene {
             break;
           case T.WATER:
             ctx.drawImage(this.tileArt.water[waterFrame], px, py);
+            break;
+          case T.BRIDGE:
+            // fallback art for when the map image is absent: metal planks
+            ctx.drawImage(this.tileArt.solid[0], px, py);
             break;
           case T.CRATE: {
             const dmgKey = this.level.key(tx, ty);

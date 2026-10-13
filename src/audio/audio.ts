@@ -115,6 +115,19 @@ export const TRACKS: Track[] = [
     leadWave: 'square',
     bassWave: 'sawtooth',
   },
+  {
+    // 9 Boss battle - tense, relentless minor march (ORIGINAL composition:
+    //    the original game's boss BGM is copyrighted and cannot be shipped).
+    //    Switched in by triggerBoss() for stages that define bossMusic.
+    bpm: 164,
+    root: 40,
+    scale: [0, 2, 3, 5, 7, 8, 10],
+    bass: [n(0, 0, 2), n(2, 0, 1), n(3, 0, 1), n(4, 3, 2), n(6, 2, 2), n(8, 0, 2), n(10, 0, 1), n(11, 4, 1), n(12, 3, 2), n(14, 2, 2)],
+    lead: [n(0, 4), n(2, 3), n(3, 4), n(4, 2), n(6, 4), n(8, 5), n(10, 4), n(11, 3), n(12, 2, 2), n(14, 4)],
+    drums: 'k.hks.hkk.hks.hk',
+    leadWave: 'sawtooth',
+    bassWave: 'square',
+  },
 ];
 
 const midiToFreq = (m: number) => 440 * Math.pow(2, (m - 69) / 12);

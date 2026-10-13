@@ -194,6 +194,22 @@ node verify_traversal.mjs
 #   （grunt/runner/heavy/sniper/shield/bomber/jumper/flame），
 #   mapImageActive=true，0 控制台错误。
 
+# 水域/桥梁深度还原验收（2026-10-13 第二轮，参考视频版本冲突已报告用户）
+#   1) 提取器重跑：桥列只放 1 行 BRIDGE 甲板，甲板之下改填 WATER（河）。
+#      此前桥下是实心岩层（掉下桥会站在隐形岩石上）——与图片里的河流不符。
+#   2) Level.deadlyWater（仅第一关）：触水即溺亡（原作行为），
+#      2-8 关保持可涉水 notch 不变。
+#   3) 爆炸每次只炸 1 块桥板（explodeAt，BRIDGE 走 isDestructible），
+#      形成可跳过的缺口；掉落即溺亡。
+#   4) 死亡敌人穿透桥甲板落出屏幕（moveAndCollide passDecks），
+#      对应 stage1bg.png 上 ripper 的标注 "Enemies on bridges and
+#      machines fall below the screen"。
+#   5) Boss 战切换专属原创 Boss 曲（TRACKS[8] / bossMusic），
+#      不再是同曲加速 1.06 倍；Konami 原版 Boss 曲有版权不能直接用。
+#   回归：tests/stage1Fidelity.test.ts（9 项）+ 全套 146 项 +
+#   浏览器 verify_traversal.mjs（真实跑动通关）+ bridge_fidelity.mjs
+#   （炸桥/落水溺亡/敌人落桥，0 错误）。
+
 # 回归
 npx vitest run             # 137 项全通过
 npx tsc --noEmit
