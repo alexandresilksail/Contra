@@ -90,8 +90,8 @@ camX=2800  matching pixels: 145  mismatched:   0  (100.0%)
 | 数据 | 说明 |
 |------|------|
 | `S1_GROUND_RUNS` | 岩石/草地质量 → 从地表行起 SOLID 到底 |
-| `S1_BRIDGE_RUNS` | 金属桥面 → 第 22 行 SOLID 甲板 |
-| `S1_WATER_RUNS` | 水体 → 可涉水，底部封顶保证能跳出 |
+| `S1_BRIDGE_RUNS` | 金属桥面 → 第 22 行 **T.BRIDGE** 甲板（可破坏：普通子弹/爆炸每次 1 板） |
+| `S1_WATER_RUNS` | 桥下河流 → WATER（第一关致命：触水即溺亡） |
 | `S1_PIT_RUNS` | 无底黑渊 → 留空，跌穿关卡即死（同原作） |
 | `S1_WALL_RUNS` | 右侧要塞墙 → SOLID 整体（Boss 竞技场后墙） |
 | `S1_SENSORS` | 武器箱面板 → 可击破 HIDDEN 瓦片（**不阻挡移动**，可穿过） |

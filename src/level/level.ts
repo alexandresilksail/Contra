@@ -24,6 +24,11 @@ export class Level {
   deadlyWater = false;
   /** destructible tiles that were destroyed (key = ty * tilesX + tx) */
   destroyed = new Set<number>();
+  /** what each destroyed tile used to be (key -> original tile id). The
+   *  Stage-1 renderer needs this: the uploaded map image still shows the
+   *  bridge plank / weapon pod at that spot, so the hole must be painted
+   *  over the picture or the destruction stays invisible. */
+  destroyedAs = new Map<number, number>();
 
   constructor(public def: StageDef) {
     this.tilesX = def.tiles;
@@ -98,11 +103,19 @@ export class Level {
     return ty * this.tilesX + tx;
   }
 
-  destroyTile(tx: number, ty: number): void {
+  destroyTile(tx: number, ty: number): boolean {
     const t = this.get(tx, ty);
-    if (!isDestructible(t)) return;
-    this.destroyed.add(this.key(tx, ty));
+    if (!isDestructible(t)) return false;
+    const k = this.key(tx, ty);
+    this.destroyed.add(k);
+    this.destroyedAs.set(k, t);
     this.set(tx, ty, T.EMPTY);
+    return true;
+  }
+
+  /** was this tile destroyed at runtime? */
+  isDestroyed(tx: number, ty: number): boolean {
+    return this.destroyed.has(this.key(tx, ty));
   }
 
   /* ------------------------------ queries ------------------------------ */

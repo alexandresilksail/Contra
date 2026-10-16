@@ -29,6 +29,7 @@ import { spawnBullet, updateBullet } from './bullet';
 import { weaponDef, type WeaponId } from '../weapons/weapons';
 import { buildPlayerArt, CHAR_DEFS, type PlayerArt, type CharId } from '../gfx/sprites';
 import { TILE } from '../config/constants';
+import { T } from '../level/tiles';
 
 export type PlayerState = 'alive' | 'dying' | 'dead' | 'victory';
 
@@ -534,10 +535,26 @@ export function updatePlayerBullets(w: WorldCtx, dt: number): void {
     updateBullet(b, dt);
     if (b.dead) continue;
     if (w.level.solidAt(b.x, b.y)) {
-      // Explosive ordnance detonates on impact (this is what lets the player
-      // blow a hole in a Stage-1 bridge deck); plain rounds just spark out.
-      if (b.explode > 0) w.explode(b.x, b.y, b.explode, b.dmg);
-      else w.particles.burst(b.x, b.y, 3, [PAL.yellow, PAL.grey], 40, 0.15);
+      const tx = Math.floor(b.x / TILE);
+      const ty = Math.floor(b.y / TILE);
+      const t = w.level.get(tx, ty);
+      if (b.explode > 0) {
+        // Explosive ordnance detonates on impact (this is what lets the player
+        // blow a hole in a Stage-1 bridge deck).
+        w.explode(b.x, b.y, b.explode, b.dmg);
+      } else if (t === T.BRIDGE) {
+        // Plain rifle fire also punches through bridge decking - one plank
+        // per hit, exactly like the original: the hole is jumpable, but the
+        // river underneath is lethal, so shooting the bridge is a real risk.
+        if (w.level.destroyTile(tx, ty)) {
+          w.particles.burst(tx * TILE + 8, ty * TILE + 8, 6, [PAL.steel, PAL.white, PAL.orange], 90, 0.3, 260);
+          w.audio.sfx('explosionSmall');
+        } else {
+          w.particles.burst(b.x, b.y, 3, [PAL.yellow, PAL.grey], 40, 0.15);
+        }
+      } else {
+        w.particles.burst(b.x, b.y, 3, [PAL.yellow, PAL.grey], 40, 0.15);
+      }
       b.dead = true;
     }
   }

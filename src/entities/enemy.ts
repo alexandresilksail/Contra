@@ -1,4 +1,4 @@
-import { GRAVITY, MAX_FALL, PAL } from '../config/constants';
+import { GRAVITY, MAX_FALL, PAL, VIEW_H } from '../config/constants';
 import type { WorldCtx } from '../core/world';
 import { buildEnemyArt, type SpriteSet } from '../gfx/sprites';
 import { ledgeAhead, moveAndCollide, onGround as probeGround, wallAhead } from '../systems/collision';
@@ -206,7 +206,11 @@ export function updateEnemy(e: Enemy, dt: number, w: WorldCtx): void {
     // catches them.
     if (!e.flying) moveAndCollide(e as any, w.level, dt, { oneWay: true, passDecks: true });
     e.y += (e.flying ? 90 : 0) * dt;
-    if (e.stateT > 0.5) e.dead = true;
+    // Gone once past the bottom edge of the view (the original drops bodies
+    // out of sight); on solid ground they simply lie there for the death
+    // flip animation and expire on the timer.
+    if (e.y > w.cam.y + VIEW_H + 8) e.dead = true;
+    else if (e.stateT > 0.5) e.dead = true;
     return;
   }
 

@@ -187,12 +187,21 @@ the procedural boss art for Stage 1's "BASE COMMANDER".
    the extractor previously filled with SOLID rock under both bridge decks
    and the water lip at cols 0-1 (`Level.deadlyWater`, stage-1 only;
    stages 2-8 keep their wadeable notch water). (b) Bridge decks are a new
-   destructible tile `T.BRIDGE`: one plank per blast (`explodeAt()`), the
-   river below stays WATER, so a careless blast drops you in and you
-   drown. (c) Dying enemies fall THROUGH bridge decks and below the screen
-   (`passDecks` in `moveAndCollide()`), matching the ripper note printed on
-   `stage1bg.png` ("Enemies on bridges and machines fall below the
-   screen"). (d) The boss fight now switches to a **distinct original
-   boss-battle composition** (`TRACKS[8]`, `StageDef.bossMusic`) instead of
-   merely speeding the stage track up by 6 %; Konami's boss BGM cannot be
-   shipped (copyright). Regenerated via `tools/stage1_extract.py`.
+   destructible tile `T.BRIDGE`: **plain bullets and explosions both blow
+   exactly one plank per hit** (a jumpable hole; the original lets normal
+   rounds punch through the deck — user ruling 2026-10-16), the river below
+   stays WATER, so a careless blast drops you in and you drown. (c) Dying
+   enemies fall THROUGH bridge decks and keep falling until they pass the
+   camera bottom (`passDecks` in `moveAndCollide()` + a screen-bottom cull in
+   the death branch), matching the ripper note printed on `stage1bg.png`
+   ("Enemies on bridges and machines fall below the screen"). (d) The boss
+   fight now switches to a **distinct original boss-battle composition**
+   (`TRACKS[8]`, `StageDef.bossMusic`) instead of merely speeding the stage
+   track up by 6 %; Konami's boss BGM cannot be shipped (copyright).
+   Regenerated via `tools/stage1_extract.py`.
+9. **Destroyed-tile rendering over the map image (2026-10-16).** Because
+   Stage 1 paints the uploaded panorama 1:1, a destroyed tile's hole would
+   stay invisible (the picture still draws the deck). `Level` now records the
+   original tile id (`destroyedAs`/`isDestroyed`) and `drawTiles()` repaints
+   destroyed tiles over the image: bridge planks as river art, weapon pods /
+   crates as a dark rock cavity.

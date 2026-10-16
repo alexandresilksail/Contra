@@ -6,8 +6,11 @@ import { audio } from '../src/audio/audio';
 import { Level } from '../src/level/level';
 import { stageDef } from '../src/level/stages';
 import { T, isBlocking, isDestructible } from '../src/level/tiles';
-import { GROUND_ROW, LEVEL_ROWS } from '../src/config/constants';
+import { GROUND_ROW, LEVEL_ROWS, VIEW_H } from '../src/config/constants';
 import { damageEnemy } from '../src/entities/enemy';
+import { updatePlayerBullets } from '../src/entities/player';
+import { spawnBullet } from '../src/entities/bullet';
+import { weaponDef } from '../src/weapons/weapons';
 
 /* ------------------------------------------------------------------ */
 /* harness (same shape as tests/traversal.test.ts)                     */
@@ -164,5 +167,100 @@ describe('Stage 1 fidelity: distinct boss music (音乐)', () => {
     } finally {
       spy.mockRestore();
     }
+  });
+});
+
+describe('Stage 1 fidelity: plain fire punches bridge planks (普通子弹打穿桥板)', () => {
+  it('a plain rifle round destroys exactly ONE plank and is spent', () => {
+    const input = new FakeInput();
+    const scene = new GameScene(makeHost(input));
+    scene.start({ stage: 1, chars: ['razor', 'razor'], twoPlayer: false, continueUsed: 0 });
+    const level = scene.level;
+    expect(level.get(50, GROUND_ROW)).toBe(T.BRIDGE);
+    // a plain (non-explosive) rifle round flying right through the deck row
+    spawnBullet(scene.world.pbullets, 49 * 16 + 12, GROUND_ROW * 16 + 8, 0, weaponDef('rifle'), true);
+    updatePlayerBullets(scene.world, FIXED);
+    expect(level.get(50, GROUND_ROW), 'the plank that was hit is gone').toBe(T.EMPTY);
+    expect(level.get(51, GROUND_ROW), 'the next plank survives').toBe(T.BRIDGE);
+    expect(level.isDestroyed(50, GROUND_ROW)).toBe(true);
+    expect(level.destroyedAs.get(level.key(50, GROUND_ROW))).toBe(T.BRIDGE);
+    expect(scene.world.pbullets.active.length, 'the round is spent').toBe(0);
+  });
+
+  it('plain fire does NOT break solid rock', () => {
+    const input = new FakeInput();
+    const scene = new GameScene(makeHost(input));
+    scene.start({ stage: 1, chars: ['razor', 'razor'], twoPlayer: false, continueUsed: 0 });
+    const level = scene.level;
+    expect(level.get(47, GROUND_ROW)).toBe(T.SOLID);
+    spawnBullet(scene.world.pbullets, 46 * 16 + 12, GROUND_ROW * 16 + 8, 0, weaponDef('rifle'), true);
+    updatePlayerBullets(scene.world, FIXED);
+    expect(level.get(47, GROUND_ROW), 'rock is untouched').toBe(T.SOLID);
+  });
+});
+
+describe('Stage 1 fidelity: corpses fall out of sight (落出屏幕)', () => {
+  it('a corpse on the bridge drops below the screen bottom and is removed', () => {
+    const input = new FakeInput();
+    const scene = new GameScene(makeHost(input));
+    scene.start({ stage: 1, chars: ['razor', 'razor'], twoPlayer: false, continueUsed: 0 });
+    const e = scene.spawnEnemy('grunt', 52 * 16, GROUND_ROW * 16 - 22)!;
+    e.spawnGrace = 0; // skip the drop-in protection
+    damageEnemy(e, 999, scene.world, e.x); // lethal
+    expect(e.state).toBe('death');
+    const screenBottom = scene.world.cam.y + VIEW_H;
+    let sawBelowScreen = false;
+    for (let f = 0; f < 120 && !e.dead; f++) {
+      scene.update(FIXED);
+      if (e.y > screenBottom) sawBelowScreen = true;
+    }
+    expect(sawBelowScreen, 'the corpse fell past the bottom of the view').toBe(true);
+    expect(e.dead, 'and was removed once out of sight').toBe(true);
+    // it went THROUGH the deck, not resting on it
+    expect(e.y).toBeGreaterThan(GROUND_ROW * 16 + 16);
+  });
+
+  it('a corpse on solid ground expires on the death timer, not by falling', () => {
+    const input = new FakeInput();
+    const scene = new GameScene(makeHost(input));
+    scene.start({ stage: 1, chars: ['razor', 'razor'], twoPlayer: false, continueUsed: 0 });
+    const e = scene.spawnEnemy('grunt', 40 * 16, GROUND_ROW * 16 - 22)!;
+    e.spawnGrace = 0;
+    damageEnemy(e, 999, scene.world, e.x);
+    expect(e.state).toBe('death');
+    for (let f = 0; f < 120 && !e.dead; f++) scene.update(FIXED);
+    expect(e.dead).toBe(true);
+    // it stayed on the ground (well above the screen bottom)
+    expect(e.y).toBeLessThan(scene.world.cam.y + VIEW_H);
+  });
+});
+
+describe('Stage 1 fidelity: destroyed objects stay visible (缺口可见)', () => {
+  it('Level records what a destroyed tile used to be', () => {
+    const level = new Level(stageDef(1));
+    expect(level.destroyTile(50, GROUND_ROW)).toBe(true);
+    expect(level.isDestroyed(50, GROUND_ROW)).toBe(true);
+    expect(level.destroyedAs.get(level.key(50, GROUND_ROW))).toBe(T.BRIDGE);
+    expect(level.get(50, GROUND_ROW)).toBe(T.EMPTY);
+    // destroying the same tile again is a no-op
+    expect(level.destroyTile(50, GROUND_ROW)).toBe(false);
+  });
+
+  it('drawing after a plank is destroyed does not throw (hole-paint render path)', () => {
+    // NOTE: the jsdom canvas stub cannot load the sprite pack, so the visual
+    // hole itself is verified by the browser probe (tools/bridge_fidelity.mjs);
+    // this guards the render path against runtime errors.
+    const input = new FakeInput();
+    const scene = new GameScene(makeHost(input));
+    scene.start({ stage: 1, chars: ['razor', 'razor'], twoPlayer: false, continueUsed: 0 });
+    const ctx = makeCtx();
+    scene.level.destroyTile(50, GROUND_ROW);
+    scene.players[0].place(52 * 16, GROUND_ROW * 16 - 22);
+    expect(() => {
+      for (let f = 0; f < 3; f++) {
+        scene.update(FIXED);
+        scene.draw(ctx);
+      }
+    }).not.toThrow();
   });
 });

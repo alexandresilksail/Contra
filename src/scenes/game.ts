@@ -781,18 +781,33 @@ export class GameScene {
     const waterFrame = Math.floor(this.world.time * 6) % 3;
     for (let tx = tx0; tx <= tx1; tx++) {
       for (let ty = ty0; ty <= ty1; ty++) {
-        const t = this.level.get(tx, ty);
-        if (t === T.EMPTY) continue;
+        const px = tx * TILE - camX;
+        const py = ty * TILE - camY;
         // Stage 1 draws the uploaded map image 1:1 as the level visual, so the
         // terrain the picture already shows must NOT be painted a second time
         // with tile art - that would cover the original art. Only objects the
         // picture does not carry (the boss gate, crates, spikes, ladders,
         // ledges) are still drawn here.
+        if (this.mapImageActive && this.level.isDestroyed(tx, ty)) {
+          // ...but a destroyed object MUST be painted over: the picture still
+          // shows the bridge plank / weapon pod there, and without this the
+          // hole is invisible while the physics already lets you fall in.
+          const was = this.level.destroyedAs.get(this.level.key(tx, ty));
+          if (was === T.BRIDGE) {
+            // the plank is gone: the river below shows through the gap
+            ctx.drawImage(this.tileArt.water[waterFrame], px, py);
+          } else {
+            // crate / weapon pod leaves a dark cavity in the rock face
+            ctx.fillStyle = '#1d1410';
+            ctx.fillRect(px, py, TILE, TILE);
+          }
+          continue;
+        }
+        const t = this.level.get(tx, ty);
+        if (t === T.EMPTY) continue;
         if (this.mapImageActive && (t === T.SOLID || t === T.WATER || t === T.HIDDEN || t === T.BRIDGE)) {
           continue;
         }
-        const px = tx * TILE - camX;
-        const py = ty * TILE - camY;
         switch (t) {
           case T.SOLID: {
             const above = this.level.get(tx, ty - 1);
