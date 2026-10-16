@@ -313,7 +313,7 @@ export class StageSelect {
 
 export class OptionsScreen {
   index = 0;
-  rows = ['MUSIC VOLUME', 'SFX VOLUME', 'PLAYERS', 'SCREEN SHAKE', 'SHOW FPS', 'RESET SAVE DATA', 'BACK'];
+  rows = ['MUSIC VOLUME', 'SFX VOLUME', 'MASTER VOLUME', 'MUTE', 'PLAYERS', 'SCREEN SHAKE', 'SHOW FPS', 'RESET SAVE DATA', 'BACK'];
   constructor(private host: GameHost) {}
 
   update(): void {
@@ -330,12 +330,20 @@ export class OptionsScreen {
           audio.setSfxVolume(s.sfxVolume);
           break;
         case 2:
-          s.players = s.players === 1 ? 2 : 1;
+          s.masterVolume = Math.max(0, Math.min(1, Math.round((s.masterVolume + d * 0.1) * 10) / 10));
+          audio.setMasterVolume(s.masterVolume);
           break;
         case 3:
-          s.screenShake = !s.screenShake;
+          s.muted = !s.muted;
+          audio.setMuted(s.muted);
           break;
         case 4:
+          s.players = s.players === 1 ? 2 : 1;
+          break;
+        case 5:
+          s.screenShake = !s.screenShake;
+          break;
+        case 6:
           s.showFps = !s.showFps;
           break;
       }
@@ -354,12 +362,12 @@ export class OptionsScreen {
     if (inp.pressed(0, 'right')) change(1);
     if (inp.pressed(0, 'start') || inp.pressed(0, 'shoot')) {
       audio.sfx('menuSelect');
-      if (this.index === 5) {
+      if (this.index === 7) {
         const fresh = this.host.save;
         fresh.highScore = 0;
         fresh.maxStageUnlocked = 1;
         this.host.persist();
-      } else if (this.index === 6) {
+      } else if (this.index === 8) {
         this.host.goto('menu');
       } else change(1);
     }
@@ -373,6 +381,8 @@ export class OptionsScreen {
     const values = [
       bar(s.musicVolume),
       bar(s.sfxVolume),
+      bar(s.masterVolume),
+      s.muted ? 'MUTED' : 'ON',
       s.players === 2 ? '2 PLAYERS' : '1 PLAYER',
       s.screenShake ? 'ON' : 'OFF',
       s.showFps ? 'ON' : 'OFF',
@@ -490,6 +500,7 @@ export class StageClearScreen {
     if (this.t > 0.6 && (inp.pressed(0, 'start') || inp.pressed(0, 'shoot'))) {
       const next = (this.host.lastStart?.stage ?? 1) + 1;
       if (next > 8) {
+        audio.sfx('victory');
         this.host.goto('ending');
       } else {
         audio.sfx('menuSelect');

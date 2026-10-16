@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "generatedBy": "tools/assets/build-asset-manifest.mjs",
+  "generatedAt": "2026-10-16T10:10:50.836Z",
+  "level": "level-02",
+  "title": "BASE（基地/第二关）",
+  "originalStage": 2,
+  "coverage": "PARTIAL",
+  "notes": "两个参考仓库均只有第一关素材。当前为程序化原创主题美术 + 手工编排 tile 地图（可运行、无版权风险），但不是原作素材。",
+  "assets": {},
+  "sharedRefs": {
+    "player.sheet": {
+      "manifest": "../../../manifest.json",
+      "id": "player.sheet"
+    },
+    "weapons.pickups": {
+      "manifest": "../../../manifest.json",
+      "id": "weapons.pickups"
+    }
+  },
+  "gaps": [
+    "L02-BG-MAP",
+    "L02-TILES",
+    "L02-BOSS",
+    "L02-AUDIO"
+  ]
+}

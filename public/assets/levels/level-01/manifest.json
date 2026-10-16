@@ -1,0 +1,97 @@
+{
+  "schemaVersion": 1,
+  "generatedBy": "tools/assets/build-asset-manifest.mjs",
+  "generatedAt": "2026-10-16T10:10:50.836Z",
+  "level": "level-01",
+  "title": "JUNGLE（丛林/第一关）",
+  "originalStage": 1,
+  "coverage": "AVAILABLE_AND_VERIFIED",
+  "notes": "唯一拥有完整原作素材的关卡：地图全景图 + 地块 + Boss + 角色/武器，且经过浏览器通关验收。",
+  "assets": {
+    "background.panorama": {
+      "file": "../../../sprites/stage1bg.png",
+      "kind": "image",
+      "title": "完整关卡布局全景图（3456×245，世界锁定 1:1 绘制）",
+      "license": "THIRD_PARTY_RESTRICTED",
+      "licenseBasis": "Konami NES rip, local-only.",
+      "status": "integrated-local",
+      "publishable": false,
+      "sourceSheet": {
+        "width": 3456,
+        "height": 245,
+        "artRows": [
+          8,
+          223
+        ],
+        "worldOffsetY": 253,
+        "note": "Complete original map image kept intact — no cropping, no re-drawing, no tile re-slicing. Collision data is extracted independently (tools/stage1_extract.py -> src/level/stage1ImageData.ts)."
+      },
+      "bytes": 58789,
+      "sha256": "8d91778ae391bbead5bb53002dbfb8e5f1974ec19efda23557b00b8b1f95a7b8",
+      "width": 3456,
+      "height": 245,
+      "format": "PNG",
+      "hasAlpha": false
+    },
+    "terrain.tiles": {
+      "file": "../../../sprites/tiles1.png",
+      "kind": "tileset",
+      "title": "第一关 16px 地块集（solid/platform/water）",
+      "license": "THIRD_PARTY_RESTRICTED",
+      "licenseBasis": "Konami NES rip, local-only.",
+      "status": "integrated-local",
+      "publishable": false,
+      "sourceSheet": {
+        "width": 288,
+        "height": 64,
+        "grid": [
+          18,
+          4
+        ],
+        "tile": 16,
+        "waterFrames": 3
+      },
+      "bytes": 5069,
+      "sha256": "a7e71b3f603800d440ad06a4ca86bdd024840de70d23ac32c01ea60b93ede19d",
+      "width": 288,
+      "height": 64,
+      "format": "PNG",
+      "hasAlpha": true
+    },
+    "boss.wall": {
+      "file": "../../../sprites/wall1.png",
+      "kind": "image",
+      "title": "防御墙 Boss",
+      "license": "THIRD_PARTY_RESTRICTED",
+      "licenseBasis": "Konami NES rip, local-only.",
+      "status": "integrated-local",
+      "publishable": false,
+      "sourceSheet": {
+        "width": 223,
+        "height": 192,
+        "scale": 0.55
+      },
+      "bytes": 2217,
+      "sha256": "b381e8de04b787f9726c779d09a0a6cfdd8648db6609153e5a69400aee7f73de",
+      "width": 223,
+      "height": 192,
+      "format": "PNG",
+      "hasAlpha": false
+    }
+  },
+  "sharedRefs": {
+    "player.sheet": {
+      "manifest": "../../../manifest.json",
+      "id": "player.sheet"
+    },
+    "weapons.pickups": {
+      "manifest": "../../../manifest.json",
+      "id": "weapons.pickups"
+    },
+    "ui.title": {
+      "manifest": "../../../manifest.json",
+      "id": "ui.title"
+    }
+  },
+  "gaps": []
+}

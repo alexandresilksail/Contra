@@ -10,7 +10,10 @@
     "preview": "vite preview --port 4173",
     "test": "vitest run",
     "test:watch": "vitest",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "assets:scan-current": "node tools/assets/scan-assets.mjs --label current-project --root public --out tools/assets/out/scan-current.json",
+    "assets:manifest": "node tools/assets/build-asset-manifest.mjs",
+    "assets:validate": "node tools/assets/validate-assets.mjs --scan tools/assets/out/scan-current.json --manifest public/assets/manifest.json --manifest-root public/assets --out tools/assets/out/validation-manifests.json"
   },
   "devDependencies": {
     "typescript": "~5.6.3",

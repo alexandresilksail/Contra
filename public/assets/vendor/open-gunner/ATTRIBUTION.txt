@@ -1,0 +1,60 @@
+OPEN GUNNER — ATTRIBUTION / LICENSE NOTICE
+==========================================
+
+The 12 PNG files in this directory come from the "Open Gunner" graphics
+collection by Master484 (m484games.ucoz.com), originally published on
+OpenGameArt.org:
+
+  - Open Gunner Starter Kit
+    https://opengameart.org/content/open-gunner-starter-kit
+  - Open Gunner Expansion Pack 1
+    https://opengameart.org/node/39323
+
+They were obtained via the public repository 2cym/GameHub
+(https://github.com/2cym/GameHub, commit 438fdba81ea0aa2d0752c0fe583f439db49da240,
+path public/contra/), which bundles the collection without a repo-level
+license file. The license below is taken from the per-file license banners
+printed on the sheets themselves and cross-checked against the OpenGameArt
+release pages.
+
+PER-FILE LICENSE
+----------------
+  CC-BY 3.0 (attribution required):
+    hero.png             "OPEN GUNNER HERO VERSION 2"      (banner on sheet)
+    tiles.png            "OPEN GUNNER STARTER TILESET"     (banner on sheet)
+    enemies.png          "OPEN GUNNER ENEMIES"             (banner on sheet)
+    mechs.png            "OPEN GUNNER MECHS"               (banner on sheet)
+    pickups.png          "OPEN GUNNER MISC OBJECTS"        (banner on sheet)
+    enemy_soldier.png    "OPEN GUNNER ENEMY SOLDIER
+                          VERSION 2"                       (banner on sheet)
+    hud.png              "OPEN GUNNER BARS AND PANELS"     (banner on sheet)
+    bg1.png, bg2.png     forest background art from the same
+                          collection (Open Gunner Expansion
+                          Pack 1, CC-BY 3.0 on OpenGameArt)
+
+  CC0 1.0 (public domain dedication, no attribution required):
+    bullets.png          "M484 Bullet Collection 2" by Master484
+                          (CC0 on OpenGameArt)
+
+  No copyright restriction (flat solid-color tiles, no authorship):
+    bg3.png, bg4.png
+
+ATTRIBUTION STRING (required by CC-BY 3.0 — ship this with the game)
+--------------------------------------------------------------------
+  "Art assets: Open Gunner by Master484 (CC-BY 3.0),
+   https://opengameart.org/content/open-gunner-starter-kit"
+
+CC-BY 3.0 summary: you may use, share and adapt these files, including
+commercially, as long as you give appropriate credit, provide a link to the
+license, and indicate if changes were made.
+
+CHANGES MADE
+------------
+None. The files are byte-identical copies; SHA-256 hashes are recorded in
+docs/assets/asset-inventory.csv and public/assets/manifest.json.
+
+NOTE: these sheets are NOT wired into the renderer yet. Stage 1 keeps using
+the locally supplied Konami reference art (gitignored, not for
+redistribution). This vendor set exists so a fully redistributable build is
+possible; switching the renderer over is a deliberate, separately approved
+change (see docs/assets/asset-source-and-license.md).

@@ -5,6 +5,8 @@ const KEY = 'ironstorm.save.v1';
 export interface Settings {
   musicVolume: number; // 0..1
   sfxVolume: number; // 0..1
+  masterVolume: number; // 0..1
+  muted: boolean;
   screenShake: boolean;
   showFps: boolean;
   players: 1 | 2;
@@ -24,6 +26,8 @@ export const defaultSave = (): SaveData => ({
   settings: {
     musicVolume: 0.5,
     sfxVolume: 0.7,
+    masterVolume: 0.9,
+    muted: false,
     screenShake: true,
     showFps: false,
     players: 1,
@@ -42,6 +46,8 @@ function sanitize(raw: any): SaveData {
     settings: {
       musicVolume: clamp01(s.musicVolume, base.settings.musicVolume),
       sfxVolume: clamp01(s.sfxVolume, base.settings.sfxVolume),
+      masterVolume: clamp01(s.masterVolume, base.settings.masterVolume),
+      muted: typeof s.muted === 'boolean' ? s.muted : false,
       screenShake: typeof s.screenShake === 'boolean' ? s.screenShake : true,
       showFps: typeof s.showFps === 'boolean' ? s.showFps : false,
       players: s.players === 2 ? 2 : 1,

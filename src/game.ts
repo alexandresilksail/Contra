@@ -57,6 +57,8 @@ export class Game implements GameHost {
 
     this.audio.setMusicVolume(this.save.settings.musicVolume);
     this.audio.setSfxVolume(this.save.settings.sfxVolume);
+    this.audio.setMasterVolume(this.save.settings.masterVolume);
+    this.audio.setMuted(this.save.settings.muted);
   }
 
   boot(): void {
@@ -67,6 +69,8 @@ export class Game implements GameHost {
       this.audio.init();
       this.audio.setMusicVolume(this.save.settings.musicVolume);
       this.audio.setSfxVolume(this.save.settings.sfxVolume);
+      this.audio.setMasterVolume(this.save.settings.masterVolume);
+      this.audio.setMuted(this.save.settings.muted);
     };
     window.addEventListener('keydown', unlock, { once: true });
     window.addEventListener('pointerdown', unlock, { once: true });
@@ -104,8 +108,8 @@ export class Game implements GameHost {
         this.paused = !this.paused;
         this.pauseIndex = 0;
         this.audio.sfx('menuSelect');
-        if (this.paused) this.audio.stopTrack();
-        else if (this.scene.def) this.audio.playTrack(this.scene.def.music);
+        if (this.paused) this.audio.pauseTrack();
+        else this.audio.resumeTrack();
       }
       if (this.paused) {
         if (this.input.pressed(0, 'up')) this.pauseIndex = (this.pauseIndex + 2) % 3;
@@ -113,7 +117,7 @@ export class Game implements GameHost {
         if (this.input.pressed(0, 'start') || this.input.pressed(0, 'shoot')) {
           if (this.pauseIndex === 0) {
             this.paused = false;
-            this.audio.playTrack(this.scene.def.music);
+            this.audio.resumeTrack();
           } else if (this.pauseIndex === 1) {
             this.paused = false;
             this.startGame(this.lastStart!);

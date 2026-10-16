@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "generatedBy": "tools/assets/build-asset-manifest.mjs",
+  "generatedAt": "2026-10-16T10:10:50.836Z",
+  "level": "level-06",
+  "title": "HANGAR（机库/第六关）",
+  "originalStage": 6,
+  "coverage": "PARTIAL",
+  "notes": "同 level-02：程序化主题美术。",
+  "assets": {},
+  "sharedRefs": {
+    "player.sheet": {
+      "manifest": "../../../manifest.json",
+      "id": "player.sheet"
+    },
+    "weapons.pickups": {
+      "manifest": "../../../manifest.json",
+      "id": "weapons.pickups"
+    }
+  },
+  "gaps": [
+    "L06-BG-MAP",
+    "L06-TILES",
+    "L06-BOSS",
+    "L06-AUDIO"
+  ]
+}

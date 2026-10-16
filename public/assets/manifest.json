@@ -1,0 +1,501 @@
+{
+  "schemaVersion": 1,
+  "generatedBy": "tools/assets/build-asset-manifest.mjs",
+  "generatedAt": "2026-10-16T10:10:50.836Z",
+  "licensePolicy": {
+    "publishRequires": [
+      "LICENSE_VERIFIED",
+      "APPROVED_FOR_PROJECT"
+    ],
+    "note": "Assets without a verified license may be used for local development only. The runtime registry refuses to load non-publishable assets in publish mode."
+  },
+  "shared": {
+    "player.sheet": {
+      "file": "../sprites/players.png",
+      "kind": "spritesheet",
+      "title": "角色精灵总表（比尔 + 红色突击兵）",
+      "license": "THIRD_PARTY_RESTRICTED",
+      "licenseBasis": "Konami NES rip supplied by the user for local use; no distribution right. Local-only, gitignored.",
+      "status": "integrated-local",
+      "publishable": false,
+      "usedByLevels": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8
+      ],
+      "sourceSheet": {
+        "width": 2081,
+        "height": 1075,
+        "bands": {
+          "ground": {
+            "y": 24,
+            "cell": [
+              26,
+              36
+            ],
+            "pitch": 64
+          },
+          "jumpFallDead": {
+            "y": 203
+          },
+          "prone": {
+            "y": 41
+          },
+          "climb": {
+            "y": 8
+          }
+        },
+        "columns": {
+          "razor": {
+            "character": "Bill / P1",
+            "runX": [
+              25,
+              90,
+              154,
+              220,
+              285,
+              349
+            ],
+            "shootRunX": [
+              415,
+              480,
+              544,
+              610,
+              675,
+              739
+            ]
+          },
+          "titan": {
+            "character": "Lance / P2 + enemy infantry (palette-shared, faithful to the original)",
+            "runX": [
+              1063,
+              1127,
+              1195,
+              1258,
+              1321,
+              1392
+            ],
+            "shootRunX": [
+              1453,
+              1517,
+              1585,
+              1648,
+              1712,
+              1780
+            ]
+          }
+        },
+        "animations": {
+          "idle": {
+            "frames": 1,
+            "source": "run frame 0"
+          },
+          "run": {
+            "frames": 6,
+            "source": "runX"
+          },
+          "shootRun": {
+            "frames": 6,
+            "source": "shootRunX"
+          },
+          "jump": {
+            "frames": 1,
+            "band": "jumpFallDead"
+          },
+          "fall": {
+            "frames": 1,
+            "band": "jumpFallDead"
+          },
+          "crouch": {
+            "frames": 1,
+            "band": "prone"
+          },
+          "climb": {
+            "frames": 2,
+            "band": "climb"
+          },
+          "dead": {
+            "frames": 2,
+            "band": "jumpFallDead"
+          }
+        },
+        "note": "Slicing/trim/align/scale pipeline lives in src/gfx/pack.ts (verified). Enemy infantry reuses the right column — the original has no separate enemy sheet."
+      },
+      "bytes": 108746,
+      "sha256": "e568c6d7f4196b3b1af89cb9b0be2abe7cb4642331af726f9abab7191a5a6f11",
+      "width": 2081,
+      "height": 1075,
+      "format": "PNG",
+      "hasAlpha": false
+    },
+    "weapons.pickups": {
+      "file": "../sprites/pickups.png",
+      "kind": "spritesheet",
+      "title": "武器胶囊图标",
+      "license": "THIRD_PARTY_RESTRICTED",
+      "licenseBasis": "Konami NES rip, local-only.",
+      "status": "integrated-local",
+      "publishable": false,
+      "usedByLevels": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8
+      ],
+      "sourceSheet": {
+        "width": 124,
+        "height": 32,
+        "cells": {
+          "x": [
+            0,
+            25,
+            50,
+            75,
+            100
+          ],
+          "y": [
+            0,
+            17
+          ],
+          "w": 24,
+          "h": 15
+        },
+        "note": "Authoritative weapon letters are overlaid at render time from weaponDef() (baked letters are misaligned in the sheet)."
+      },
+      "bytes": 1383,
+      "sha256": "2deaf2625b81996e4bbc2d2310d6d2c0605818db21ae913a9b83a35b14f0cfbc",
+      "width": 124,
+      "height": 32,
+      "format": "PNG",
+      "hasAlpha": false
+    },
+    "ui.title": {
+      "file": "../sprites/title.png",
+      "kind": "image",
+      "title": "标题画面金属字标",
+      "license": "THIRD_PARTY_RESTRICTED",
+      "licenseBasis": "Konami NES rip, local-only.",
+      "status": "integrated-local",
+      "publishable": false,
+      "usedByLevels": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8
+      ],
+      "sourceSheet": {
+        "width": 560,
+        "height": 576,
+        "chromaKey": [
+          221,
+          0,
+          255
+        ]
+      },
+      "bytes": 58691,
+      "sha256": "b215715decdd2b52410b1b24676f9278823c943257f7b0b8fb94f8e6ec4b8c75",
+      "width": 560,
+      "height": 576,
+      "format": "PNG",
+      "hasAlpha": true
+    },
+    "vendor.openGunner.hero": {
+      "file": "vendor/open-gunner/hero.png",
+      "kind": "spritesheet",
+      "title": "Open Gunner 主角精灵总表（站/蹲/跳/跑/8向瞄准/爬梯/受伤/死亡）",
+      "license": "LICENSE_VERIFIED",
+      "licenseBasis": "CC-BY 3.0, Master484 (Open Gunner, OpenGameArt). Sheet banner: OPEN GUNNER HERO VERSION 2 / MADE BY MASTER484 / LICENSE: CC-BY 3.0. Attribution shipped in vendor/open-gunner/ATTRIBUTION.txt.",
+      "status": "available-vendor",
+      "publishable": true,
+      "usedByLevels": [],
+      "sourceSheet": {
+        "width": 1026,
+        "height": 1280,
+        "note": "Labeled bands (STAND/DUCK/JUMP/RUN/GROUND/CRAWL/aiming grid/ladder climb/wall jump...). Not yet sliced by the runtime pack; renderer wiring is a separate approved change."
+      },
+      "bytes": 80792,
+      "sha256": "695c55f2c39de7b5376c66a772a75a69b908d06db5f14d0f7c4211f134eb89fd",
+      "width": 1026,
+      "height": 1280,
+      "format": "PNG",
+      "hasAlpha": true
+    },
+    "vendor.openGunner.tiles": {
+      "file": "vendor/open-gunner/tiles.png",
+      "kind": "tileset",
+      "title": "Open Gunner 地块集（50×50 单元，操场/背景/门/梯）",
+      "license": "LICENSE_VERIFIED",
+      "licenseBasis": "CC-BY 3.0, Master484 (Open Gunner Starter Tileset, banner on sheet).",
+      "status": "available-vendor",
+      "publishable": true,
+      "usedByLevels": [],
+      "sourceSheet": {
+        "width": 1040,
+        "height": 904,
+        "tile": 50,
+        "note": "Sheet label states INSIDE AREA = 50*50 and TILES ARE 50*50."
+      },
+      "bytes": 34955,
+      "sha256": "adde8339114cbfd5007480b9cb881b483f3c322b9f69e274b15b77f85985a312",
+      "width": 1040,
+      "height": 904,
+      "format": "PNG",
+      "hasAlpha": true
+    },
+    "vendor.openGunner.enemies": {
+      "file": "vendor/open-gunner/enemies.png",
+      "kind": "spritesheet",
+      "title": "Open Gunner 敌人（炮塔×2 / 炸弹载体 / 飞行机器人）",
+      "license": "LICENSE_VERIFIED",
+      "licenseBasis": "CC-BY 3.0, Master484 (Open Gunner Enemies, banner on sheet).",
+      "status": "available-vendor",
+      "publishable": true,
+      "usedByLevels": [],
+      "sourceSheet": {
+        "width": 530,
+        "height": 795
+      },
+      "bytes": 17036,
+      "sha256": "05ecf16bf927fd9d740c8c1fa4eafb8bf36a3b1bbc68873d557fa6c38aaa74bf",
+      "width": 530,
+      "height": 795,
+      "format": "PNG",
+      "hasAlpha": true
+    },
+    "vendor.openGunner.mechs": {
+      "file": "vendor/open-gunner/mechs.png",
+      "kind": "spritesheet",
+      "title": "Open Gunner 机甲敌人（stand/shoot/jump ×2 配色）",
+      "license": "LICENSE_VERIFIED",
+      "licenseBasis": "CC-BY 3.0, Master484 (Open Gunner Mechs, banner on sheet).",
+      "status": "available-vendor",
+      "publishable": true,
+      "usedByLevels": [],
+      "sourceSheet": {
+        "width": 773,
+        "height": 1052
+      },
+      "bytes": 42213,
+      "sha256": "fb53b18683d939fad2e48007abc97d7871e4b65e75155b0c627d79051c092c1c",
+      "width": 773,
+      "height": 1052,
+      "format": "PNG",
+      "hasAlpha": true
+    },
+    "vendor.openGunner.enemySoldier": {
+      "file": "vendor/open-gunner/enemy_soldier.png",
+      "kind": "spritesheet",
+      "title": "Open Gunner 敌兵（士兵动作序列）",
+      "license": "LICENSE_VERIFIED",
+      "licenseBasis": "CC-BY 3.0, Master484 (Open Gunner Enemy Soldier Version 2, banner on sheet).",
+      "status": "available-vendor",
+      "publishable": true,
+      "usedByLevels": [],
+      "sourceSheet": {
+        "width": 762,
+        "height": 527
+      },
+      "bytes": 22856,
+      "sha256": "e0c57e53b720079778c6dd0d1e4038429a4570f5a90bd4238e0c9db140e1b203",
+      "width": 762,
+      "height": 527,
+      "format": "PNG",
+      "hasAlpha": true
+    },
+    "vendor.openGunner.pickups": {
+      "file": "vendor/open-gunner/pickups.png",
+      "kind": "spritesheet",
+      "title": "Open Gunner 道具（武器字母胶囊/生命/门/升降台/尖刺）",
+      "license": "LICENSE_VERIFIED",
+      "licenseBasis": "CC-BY 3.0, Master484 (Open Gunner Misc Objects, banner on sheet).",
+      "status": "available-vendor",
+      "publishable": true,
+      "usedByLevels": [],
+      "sourceSheet": {
+        "width": 770,
+        "height": 740
+      },
+      "bytes": 19962,
+      "sha256": "01b02595f75799f259dfada1129b08ace20102c84d52e13782d459438e9c3f3c",
+      "width": 770,
+      "height": 740,
+      "format": "PNG",
+      "hasAlpha": true
+    },
+    "vendor.openGunner.hud": {
+      "file": "vendor/open-gunner/hud.png",
+      "kind": "spritesheet",
+      "title": "Open Gunner HUD（血条/面板）",
+      "license": "LICENSE_VERIFIED",
+      "licenseBasis": "CC-BY 3.0, Master484 (Open Gunner Bars and Panels, banner on sheet).",
+      "status": "available-vendor",
+      "publishable": true,
+      "usedByLevels": [],
+      "sourceSheet": {
+        "width": 620,
+        "height": 689
+      },
+      "bytes": 19160,
+      "sha256": "a7aeb9b3009897a3ab6d80cdba0182b68922272998426a31ce259b2ae529736d",
+      "width": 620,
+      "height": 689,
+      "format": "PNG",
+      "hasAlpha": true
+    },
+    "vendor.openGunner.bullets": {
+      "file": "vendor/open-gunner/bullets.png",
+      "kind": "spritesheet",
+      "title": "Open Gunner 子弹（M484 Bullet Collection 2）",
+      "license": "LICENSE_VERIFIED",
+      "licenseBasis": "CC0 1.0, Master484 (M484 Bullet Collection 2, OpenGameArt). Public-domain dedication; attribution not required.",
+      "status": "available-vendor",
+      "publishable": true,
+      "usedByLevels": [],
+      "sourceSheet": {
+        "width": 520,
+        "height": 361
+      },
+      "bytes": 22490,
+      "sha256": "52f52ce30f2b932184bce2df03aea9f9d895090707e73730d22cdbc1e1a99124",
+      "width": 520,
+      "height": 361,
+      "format": "PNG",
+      "hasAlpha": true
+    },
+    "vendor.openGunner.bgForestRoots": {
+      "file": "vendor/open-gunner/bg1.png",
+      "kind": "image",
+      "title": "Open Gunner 丛林根须视差背景",
+      "license": "LICENSE_VERIFIED",
+      "licenseBasis": "CC-BY 3.0, Master484 (Open Gunner forest background art, same collection as the banner-marked sheets).",
+      "status": "available-vendor",
+      "publishable": true,
+      "usedByLevels": [],
+      "sourceSheet": {
+        "width": 1728,
+        "height": 1728
+      },
+      "bytes": 133953,
+      "sha256": "b376e150caf1546cb7d3d6fcdb2559f068fb0e757fe22a138b0dba4a1e5519c2",
+      "width": 1728,
+      "height": 1728,
+      "format": "PNG",
+      "hasAlpha": true
+    },
+    "vendor.openGunner.bgForestTrees": {
+      "file": "vendor/open-gunner/bg2.png",
+      "kind": "image",
+      "title": "Open Gunner 丛林树木视差背景",
+      "license": "LICENSE_VERIFIED",
+      "licenseBasis": "CC-BY 3.0, Master484 (Open Gunner forest background art, same collection as the banner-marked sheets).",
+      "status": "available-vendor",
+      "publishable": true,
+      "usedByLevels": [],
+      "sourceSheet": {
+        "width": 1152,
+        "height": 1152
+      },
+      "bytes": 106394,
+      "sha256": "f0b62c0364b8f10bf904be54ad0267151f6aedfda6b8651f18dc3f9085b2a8ee",
+      "width": 1152,
+      "height": 1152,
+      "format": "PNG",
+      "hasAlpha": true
+    },
+    "vendor.openGunner.bgSolidTeal": {
+      "file": "vendor/open-gunner/bg3.png",
+      "kind": "image",
+      "title": "纯色背景瓦片（青）",
+      "license": "LICENSE_VERIFIED",
+      "licenseBasis": "Flat solid-color tile; no authorship, no copyright restriction.",
+      "status": "available-vendor",
+      "publishable": true,
+      "usedByLevels": [],
+      "sourceSheet": {
+        "width": 576,
+        "height": 576
+      },
+      "bytes": 22796,
+      "sha256": "df048fe90e2e484dd981c718b6f24456725150c4a649a559f50a55bd0abfd85e",
+      "width": 576,
+      "height": 576,
+      "format": "PNG",
+      "hasAlpha": true
+    },
+    "vendor.openGunner.bgSolidPurple": {
+      "file": "vendor/open-gunner/bg4.png",
+      "kind": "image",
+      "title": "纯色背景瓦片（紫）",
+      "license": "LICENSE_VERIFIED",
+      "licenseBasis": "Flat solid-color tile; no authorship, no copyright restriction.",
+      "status": "available-vendor",
+      "publishable": true,
+      "usedByLevels": [],
+      "sourceSheet": {
+        "width": 288,
+        "height": 288
+      },
+      "bytes": 4932,
+      "sha256": "b9fcd7de717d98d8c7b3ef48e0d05d0b7c0e7465a2be37d43c5f4fe5c0e79850",
+      "width": 288,
+      "height": 288,
+      "format": "PNG",
+      "hasAlpha": true
+    }
+  },
+  "levelIndex": {
+    "level-01": {
+      "title": "JUNGLE（丛林/第一关）",
+      "coverage": "AVAILABLE_AND_VERIFIED",
+      "manifest": "./levels/level-01/manifest.json"
+    },
+    "level-02": {
+      "title": "BASE（基地/第二关）",
+      "coverage": "PARTIAL",
+      "manifest": "./levels/level-02/manifest.json"
+    },
+    "level-03": {
+      "title": "WATERFALL（瀑布/第三关）",
+      "coverage": "PARTIAL",
+      "manifest": "./levels/level-03/manifest.json"
+    },
+    "level-04": {
+      "title": "SNOW FIELD（雪原/第四关）",
+      "coverage": "PARTIAL",
+      "manifest": "./levels/level-04/manifest.json"
+    },
+    "level-05": {
+      "title": "ENERGY ZONE（能量地带/第五关）",
+      "coverage": "PARTIAL",
+      "manifest": "./levels/level-05/manifest.json"
+    },
+    "level-06": {
+      "title": "HANGAR（机库/第六关）",
+      "coverage": "PARTIAL",
+      "manifest": "./levels/level-06/manifest.json"
+    },
+    "level-07": {
+      "title": "ALIEN LAIR（异形巢穴/第七关）",
+      "coverage": "PARTIAL",
+      "manifest": "./levels/level-07/manifest.json"
+    },
+    "level-08": {
+      "title": "HEART（异形心脏/第八关）",
+      "coverage": "PARTIAL",
+      "manifest": "./levels/level-08/manifest.json"
+    }
+  }
+}

@@ -2,6 +2,19 @@
  * 100% procedural audio (Web Audio API).
  * No sample files are shipped: every SFX and every music note is synthesised
  * at runtime, so the soundtrack is original by construction.
+ *
+ * Architecture (incremental on top of the original engine):
+ *   AudioContext
+ *     └─ master (GainNode)  ← masterVolume / mute
+ *          ├─ musicBus (GainNode) ← musicVolume   (step sequencer + drums)
+ *          └─ sfxBus   (GainNode) ← sfxVolume     (one-shot VoicePool)
+ *
+ * VoicePool guarantees for one-shot SFX:
+ *   - every node chain is disconnected on `ended` (no graph leaks)
+ *   - a hard cap on simultaneous voices (oldest stolen) prevents overlap spam
+ *   - a per-SFX minimum interval throttles high-frequency triggers
+ * Music scheduler:
+ *   - lookahead scheduling, position-preserving pause/resume, tab-away re-anchor
  */
 
 type OscType = OscillatorType;
@@ -25,7 +38,7 @@ interface Track {
 
 const n = (step: number, deg: number, len = 1): Note => ({ step, deg, len });
 
-/** 8 original themes — one per stage. */
+/** 8 original stage themes + 1 boss theme. Index 8 is the boss battle track. */
 export const TRACKS: Track[] = [
   {
     // 1 Military base — driving march
@@ -130,7 +143,198 @@ export const TRACKS: Track[] = [
   },
 ];
 
+export const BOSS_TRACK = TRACKS.length - 1;
+
+/** Human-readable names for tests/docs. Index = TRACKS index. */
+export const TRACK_NAMES = [
+  'stage1-base', 'stage2-forest', 'stage3-industrial', 'stage4-underground',
+  'stage5-city', 'stage6-snow', 'stage7-alien', 'stage8-final', 'boss-battle',
+];
+
 const midiToFreq = (m: number) => 440 * Math.pow(2, (m - 69) / 12);
+
+/* ------------------------------------------------------------------ */
+/* VoicePool — one-shot SFX with lifecycle, cap and throttle           */
+/* ------------------------------------------------------------------ */
+
+interface Voice {
+  /** Force-stop and disconnect immediately. */
+  kill(now: number): void;
+  readonly endsAt: number;
+}
+
+const MAX_VOICES = 28;
+
+/** Minimum seconds between two SFX of the same name (anti-overlap). */
+const SFX_MIN_GAP: Record<string, number> = {
+  shoot: 0.03,
+  laser: 0.05,
+  spread: 0.05,
+  pierce: 0.05,
+  blast: 0.05,
+  homing: 0.05,
+  explosion: 0.07,
+  explosionSmall: 0.05,
+  jump: 0.09,
+  land: 0.06,
+  pickup: 0.1,
+  hurt: 0.12,
+  enemyHit: 0.03,
+  bossHit: 0.05,
+  death: 0.2,
+  bossDie: 0.3,
+  stageClear: 0.3,
+  gameOver: 0.3,
+  victory: 0.3,
+  menuMove: 0.045,
+  menuSelect: 0.06,
+  alarm: 0.2,
+  door: 0.3,
+};
+
+class VoicePool {
+  private voices = new Set<Voice>();
+  private lastAt = new Map<string, number>();
+
+  constructor(
+    private readonly ctx: AudioContext,
+    private readonly bus: GainNode,
+    private readonly noiseBuf: AudioBuffer,
+  ) {}
+
+  get activeCount(): number {
+    return this.voices.size;
+  }
+
+  /** Throttle gate: false when this SFX name fired too recently. */
+  gate(name: string, now = this.ctx.currentTime): boolean {
+    const gap = SFX_MIN_GAP[name];
+    if (gap === undefined) return true;
+    const last = this.lastAt.get(name);
+    if (last !== undefined && now - last < gap) return false;
+    this.lastAt.set(name, now);
+    return true;
+  }
+
+  private add(v: Voice): void {
+    if (this.voices.size >= MAX_VOICES) {
+      // steal the oldest voice to keep the graph bounded
+      const oldest = this.voices.values().next().value as Voice | undefined;
+      if (oldest) {
+        this.voices.delete(oldest);
+        oldest.kill(this.ctx.currentTime);
+      }
+    }
+    this.voices.add(v);
+  }
+
+  private retire(v: Voice): void {
+    this.voices.delete(v);
+  }
+
+  /** Oscillator one-shot with an attack/decay envelope. */
+  tone(
+    freq: number,
+    dur: number,
+    type: OscType = 'square',
+    peak = 0.3,
+    slideTo?: number,
+    delay = 0,
+  ): void {
+    const ctx = this.ctx;
+    const t = ctx.currentTime + delay;
+    const o = ctx.createOscillator();
+    o.type = type;
+    o.frequency.setValueAtTime(freq, t);
+    if (slideTo) o.frequency.exponentialRampToValueAtTime(Math.max(20, slideTo), t + dur);
+    const g = this.env(o, t, 0.005, dur, peak);
+    g.connect(this.bus);
+    o.start(t);
+    o.stop(t + dur + 0.05);
+    const voice: Voice = {
+      endsAt: t + dur + 0.05,
+      kill: (now) => {
+        try {
+          o.stop(now);
+        } catch {
+          /* already stopped */
+        }
+        teardown();
+      },
+    };
+    o.onended = () => teardown();
+    const teardown = () => {
+      try {
+        g.disconnect();
+        o.disconnect();
+      } catch {
+        /* already disconnected */
+      }
+      this.retire(voice);
+    };
+    this.add(voice);
+  }
+
+  /** Filtered-noise one-shot (explosions, hits, drums). */
+  noise(dur: number, peak: number, filterHz: number, sweepTo?: number, delay = 0): void {
+    const ctx = this.ctx;
+    const t = ctx.currentTime + delay;
+    const src = ctx.createBufferSource();
+    src.buffer = this.noiseBuf;
+    const f = ctx.createBiquadFilter();
+    f.type = 'lowpass';
+    f.frequency.setValueAtTime(filterHz, t);
+    if (sweepTo) f.frequency.exponentialRampToValueAtTime(Math.max(60, sweepTo), t + dur);
+    src.connect(f);
+    const g = this.env(f, t, 0.004, dur, peak);
+    g.connect(this.bus);
+    src.start(t);
+    src.stop(t + dur + 0.05);
+    const voice: Voice = {
+      endsAt: t + dur + 0.05,
+      kill: (now) => {
+        try {
+          src.stop(now);
+        } catch {
+          /* already stopped */
+        }
+        teardown();
+      },
+    };
+    src.onended = () => teardown();
+    const teardown = () => {
+      try {
+        g.disconnect();
+        f.disconnect();
+        src.disconnect();
+      } catch {
+        /* already disconnected */
+      }
+      this.retire(voice);
+    };
+    this.add(voice);
+  }
+
+  /** Percussive attack/decay envelope on an arbitrary source node. */
+  private env(node: AudioNode, t: number, a: number, d: number, peak: number): GainNode {
+    const g = this.ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(peak, t + a);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + a + d);
+    node.connect(g);
+    return g;
+  }
+
+  /** Stop everything immediately (level teardown / dispose). */
+  killAll(): void {
+    const now = this.ctx.currentTime;
+    for (const v of [...this.voices]) {
+      this.voices.delete(v);
+      v.kill(now);
+    }
+    this.lastAt.clear();
+  }
+}
 
 export class AudioEngine {
   ctx: AudioContext | null = null;
@@ -138,12 +342,16 @@ export class AudioEngine {
   private musicBus!: GainNode;
   private sfxBus!: GainNode;
   private noiseBuf!: AudioBuffer;
+  private pool: VoicePool | null = null;
   musicVol = 0.5;
   sfxVol = 0.7;
+  masterVol = 0.9;
+  private muted = false;
   private timer: number | null = null;
   private step = 0;
   private nextTime = 0;
   private track: Track | null = null;
+  private trackIndex = -1;
   private intensity = 1; // boss phase -> faster/harder
   private ready = false;
 
@@ -156,7 +364,7 @@ export class AudioEngine {
     const ctx = new Ctor();
     this.ctx = ctx;
     this.master = ctx.createGain();
-    this.master.gain.value = 0.9;
+    this.master.gain.value = this.muted ? 0 : this.masterVol;
     this.master.connect(ctx.destination);
     this.musicBus = ctx.createGain();
     this.musicBus.gain.value = this.musicVol * 0.5;
@@ -170,6 +378,7 @@ export class AudioEngine {
     const d = buf.getChannelData(0);
     for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
     this.noiseBuf = buf;
+    this.pool = new VoicePool(ctx, this.sfxBus, buf);
     this.ready = true;
   }
 
@@ -177,6 +386,19 @@ export class AudioEngine {
     this.init();
     if (this.ctx && this.ctx.state === 'suspended') void this.ctx.resume();
   }
+
+  /** Full teardown: stop music, kill every voice, close the context. */
+  dispose(): void {
+    this.stopTrack();
+    this.pool?.killAll();
+    const ctx = this.ctx;
+    this.ready = false;
+    this.ctx = null;
+    this.pool = null;
+    if (ctx && ctx.state !== 'closed') void ctx.close();
+  }
+
+  /* --------------------------- mixer --------------------------- */
 
   setMusicVolume(v: number): void {
     this.musicVol = v;
@@ -186,139 +408,127 @@ export class AudioEngine {
     this.sfxVol = v;
     if (this.ready) this.sfxBus.gain.value = v;
   }
+  setMasterVolume(v: number): void {
+    this.masterVol = Math.max(0, Math.min(1, v));
+    if (this.ready) this.master.gain.value = this.muted ? 0 : this.masterVol;
+  }
+  setMuted(m: boolean): void {
+    this.muted = m;
+    if (this.ready) this.master.gain.value = m ? 0 : this.masterVol;
+  }
+  isMuted(): boolean {
+    return this.muted;
+  }
+  toggleMute(): boolean {
+    this.setMuted(!this.muted);
+    return this.muted;
+  }
 
   /* ------------------------------ SFX ------------------------------ */
 
-  private env(node: AudioNode, t: number, a: number, d: number, peak: number): GainNode {
-    const g = this.ctx!.createGain();
-    g.gain.setValueAtTime(0.0001, t);
-    g.gain.linearRampToValueAtTime(peak, t + a);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + a + d);
-    node.connect(g);
-    return g;
-  }
-
-  private tone(
-    freq: number,
-    dur: number,
-    type: OscType = 'square',
-    peak = 0.3,
-    slideTo?: number,
-    delay = 0,
-  ): void {
-    if (!this.ready || !this.ctx) return;
-    const t = this.ctx.currentTime + delay;
-    const o = this.ctx.createOscillator();
-    o.type = type;
-    o.frequency.setValueAtTime(freq, t);
-    if (slideTo) o.frequency.exponentialRampToValueAtTime(Math.max(20, slideTo), t + dur);
-    const g = this.env(o, t, 0.005, dur, peak);
-    g.connect(this.sfxBus);
-    o.start(t);
-    o.stop(t + dur + 0.05);
-  }
-
-  private noise(dur: number, peak: number, filterHz: number, sweepTo?: number, delay = 0): void {
-    if (!this.ready || !this.ctx) return;
-    const t = this.ctx.currentTime + delay;
-    const src = this.ctx.createBufferSource();
-    src.buffer = this.noiseBuf;
-    const f = this.ctx.createBiquadFilter();
-    f.type = 'lowpass';
-    f.frequency.setValueAtTime(filterHz, t);
-    if (sweepTo) f.frequency.exponentialRampToValueAtTime(Math.max(60, sweepTo), t + dur);
-    src.connect(f);
-    const g = this.env(f, t, 0.004, dur, peak);
-    g.connect(this.sfxBus);
-    src.start(t);
-    src.stop(t + dur + 0.05);
-  }
-
   sfx(name: string, param = 0): void {
-    if (!this.ready) return;
+    if (!this.ready || !this.pool) return;
+    if (!this.pool.gate(name)) return; // anti-overlap throttle
+    const tone = (freq: number, dur: number, type: OscType = 'square', peak = 0.3, slideTo?: number, delay = 0) =>
+      this.pool!.tone(freq, dur, type, peak, slideTo, delay);
+    const noise = (dur: number, peak: number, filterHz: number, sweepTo?: number, delay = 0) =>
+      this.pool!.noise(dur, peak, filterHz, sweepTo, delay);
     switch (name) {
       case 'shoot':
-        this.tone(720 - param * 40, 0.07, 'square', 0.22, 240);
-        this.noise(0.05, 0.08, 2600, 700);
+        tone(720 - param * 40, 0.07, 'square', 0.22, 240);
+        noise(0.05, 0.08, 2600, 700);
         break;
       case 'laser':
-        this.tone(1500, 0.16, 'sawtooth', 0.16, 420);
+        tone(1500, 0.16, 'sawtooth', 0.16, 420);
         break;
       case 'spread':
-        this.tone(430, 0.1, 'sawtooth', 0.22, 150);
-        this.noise(0.09, 0.12, 1800, 500);
+        tone(430, 0.1, 'sawtooth', 0.22, 150);
+        noise(0.09, 0.12, 1800, 500);
         break;
       case 'pierce':
-        this.tone(1150, 0.09, 'triangle', 0.2, 700);
+        tone(1150, 0.09, 'triangle', 0.2, 700);
         break;
       case 'blast':
-        this.tone(330, 0.14, 'square', 0.24, 90);
-        this.noise(0.16, 0.2, 1400, 260);
+        tone(330, 0.14, 'square', 0.24, 90);
+        noise(0.16, 0.2, 1400, 260);
         break;
       case 'homing':
-        this.tone(900, 0.08, 'sine', 0.18, 1500);
+        tone(900, 0.08, 'sine', 0.18, 1500);
         break;
       case 'explosion':
-        this.noise(0.42, 0.4, 900, 90);
-        this.tone(120, 0.35, 'square', 0.22, 40);
+        noise(0.42, 0.4, 900, 90);
+        tone(120, 0.35, 'square', 0.22, 40);
         break;
       case 'explosionSmall':
-        this.noise(0.2, 0.24, 1200, 160);
+        noise(0.2, 0.24, 1200, 160);
         break;
       case 'jump':
-        this.tone(300, 0.13, 'square', 0.18, 660);
+        tone(300, 0.13, 'square', 0.18, 660);
         break;
       case 'land':
-        this.noise(0.07, 0.12, 700, 200);
+        noise(0.07, 0.12, 700, 200);
         break;
       case 'pickup':
-        this.tone(660, 0.07, 'square', 0.24);
-        this.tone(880, 0.07, 'square', 0.24, undefined, 0.07);
-        this.tone(1320, 0.12, 'square', 0.24, undefined, 0.14);
+        tone(660, 0.07, 'square', 0.24);
+        tone(880, 0.07, 'square', 0.24, undefined, 0.07);
+        tone(1320, 0.12, 'square', 0.24, undefined, 0.14);
         break;
       case 'hurt':
-        this.tone(200, 0.18, 'sawtooth', 0.3, 70);
-        this.noise(0.14, 0.18, 900, 200);
+        tone(200, 0.18, 'sawtooth', 0.3, 70);
+        noise(0.14, 0.18, 900, 200);
         break;
       case 'enemyHit':
-        this.noise(0.05, 0.14, 3000, 800);
+        noise(0.05, 0.14, 3000, 800);
         break;
       case 'bossHit':
-        this.tone(180, 0.1, 'square', 0.26, 120);
-        this.noise(0.09, 0.16, 2200, 400);
+        tone(180, 0.1, 'square', 0.26, 120);
+        noise(0.09, 0.16, 2200, 400);
         break;
       case 'death':
-        this.tone(420, 0.5, 'square', 0.3, 40);
-        this.noise(0.5, 0.3, 800, 60);
+        tone(420, 0.5, 'square', 0.3, 40);
+        noise(0.5, 0.3, 800, 60);
         break;
       case 'bossDie':
         for (let i = 0; i < 6; i++) {
-          this.noise(0.5, 0.35, 1200, 80, i * 0.16);
-          this.tone(140 - i * 12, 0.4, 'square', 0.22, 40, i * 0.16);
+          noise(0.5, 0.35, 1200, 80, i * 0.16);
+          tone(140 - i * 12, 0.4, 'square', 0.22, 40, i * 0.16);
         }
         break;
       case 'stageClear':
-        [523, 659, 784, 1046].forEach((f, i) => this.tone(f, 0.22, 'square', 0.26, undefined, i * 0.13));
+        [523, 659, 784, 1046].forEach((f, i) => tone(f, 0.22, 'square', 0.26, undefined, i * 0.13));
+        break;
+      case 'victory':
+        // final fanfare (stage 8 cleared): rising arpeggio into a held major chord
+        [523, 659, 784, 1046, 1318].forEach((f, i) => tone(f, 0.16, 'square', 0.24, undefined, i * 0.1));
+        tone(1046, 0.55, 'square', 0.2, undefined, 0.52);
+        tone(1318, 0.55, 'triangle', 0.18, undefined, 0.52);
+        tone(1568, 0.65, 'triangle', 0.13, undefined, 0.58);
+        noise(0.6, 0.09, 6000, 9500, 0.52);
         break;
       case 'gameOver':
-        [392, 349, 294, 220].forEach((f, i) => this.tone(f, 0.3, 'triangle', 0.28, f * 0.7, i * 0.22));
+        [392, 349, 294, 220].forEach((f, i) => tone(f, 0.3, 'triangle', 0.28, f * 0.7, i * 0.22));
         break;
       case 'menuMove':
-        this.tone(520, 0.05, 'square', 0.2);
+        tone(520, 0.05, 'square', 0.2);
         break;
       case 'menuSelect':
-        this.tone(700, 0.06, 'square', 0.24);
-        this.tone(1050, 0.1, 'square', 0.24, undefined, 0.06);
+        tone(700, 0.06, 'square', 0.24);
+        tone(1050, 0.1, 'square', 0.24, undefined, 0.06);
         break;
       case 'alarm':
-        this.tone(880, 0.16, 'square', 0.2, 620);
-        this.tone(880, 0.16, 'square', 0.2, 620, 0.24);
+        tone(880, 0.16, 'square', 0.2, 620);
+        tone(880, 0.16, 'square', 0.2, 620, 0.24);
         break;
       case 'door':
-        this.tone(90, 0.5, 'sawtooth', 0.24, 200);
-        this.noise(0.5, 0.16, 500, 120);
+        tone(90, 0.5, 'sawtooth', 0.24, 200);
+        noise(0.5, 0.16, 500, 120);
         break;
     }
+  }
+
+  /** Simultaneous one-shot voices (tests/diagnostics). */
+  get activeVoices(): number {
+    return this.pool?.activeCount ?? 0;
   }
 
   /* ------------------------------ music ------------------------------ */
@@ -327,6 +537,7 @@ export class AudioEngine {
     this.init();
     if (!this.ready) return;
     this.track = TRACKS[index % TRACKS.length];
+    this.trackIndex = index % TRACKS.length;
     this.step = 0;
     this.intensity = 1;
     this.nextTime = this.ctx!.currentTime + 0.06;
@@ -336,10 +547,44 @@ export class AudioEngine {
 
   stopTrack(): void {
     this.track = null;
+    this.trackIndex = -1;
     if (this.timer !== null) {
       clearInterval(this.timer);
       this.timer = null;
     }
+  }
+
+  /** Pause music, keeping the pattern position for a later resume. */
+  pauseTrack(): void {
+    if (this.timer !== null) {
+      clearInterval(this.timer);
+      this.timer = null;
+    }
+    // `track`, `step` and `nextTime` are preserved on purpose.
+  }
+
+  /** Resume a paused track from its exact pattern position. */
+  resumeTrack(): void {
+    if (!this.track) return;
+    this.init();
+    if (!this.ready) return;
+    // re-anchor: notes already handed to the hardware (≤120ms ahead) are done
+    this.nextTime = this.ctx!.currentTime + 0.05;
+    if (this.timer === null) this.timer = setInterval(() => this.schedule(), 25) as unknown as number;
+  }
+
+  get playing(): boolean {
+    return this.track !== null && this.timer !== null;
+  }
+
+  /** Index of the currently playing track (-1 = none). */
+  get currentTrack(): number {
+    return this.trackIndex;
+  }
+
+  /** Current 16th-step position within the pattern (tests/diagnostics). */
+  get musicStep(): number {
+    return this.step;
   }
 
   setIntensity(v: number): void {
@@ -350,6 +595,11 @@ export class AudioEngine {
     if (!this.ready || !this.track || !this.ctx) return;
     const t = this.track;
     const stepDur = 60 / t.bpm / 4 / this.intensity;
+    // Tab was backgrounded: setInterval throttled, nextTime fell far behind.
+    // Re-anchor instead of bursting a catch-up barrage of notes.
+    if (this.nextTime < this.ctx.currentTime - 0.25) {
+      this.nextTime = this.ctx.currentTime + 0.05;
+    }
     while (this.nextTime < this.ctx.currentTime + 0.12) {
       this.playStep(this.step, this.nextTime, t, stepDur);
       this.nextTime += stepDur;
@@ -384,6 +634,8 @@ export class AudioEngine {
           g.connect(this.musicBus);
           o.start(time);
           o.stop(time + dur + 0.03);
+          // music voices are short and bounded by the pattern length; they are
+          // collected by the browser once stopped (no pool churn per step)
         }
       }
     };

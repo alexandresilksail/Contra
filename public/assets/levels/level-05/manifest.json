@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "generatedBy": "tools/assets/build-asset-manifest.mjs",
+  "generatedAt": "2026-10-16T10:10:50.836Z",
+  "level": "level-05",
+  "title": "ENERGY ZONE（能量地带/第五关）",
+  "originalStage": 5,
+  "coverage": "PARTIAL",
+  "notes": "同 level-02：程序化主题美术。",
+  "assets": {},
+  "sharedRefs": {
+    "player.sheet": {
+      "manifest": "../../../manifest.json",
+      "id": "player.sheet"
+    },
+    "weapons.pickups": {
+      "manifest": "../../../manifest.json",
+      "id": "weapons.pickups"
+    }
+  },
+  "gaps": [
+    "L05-BG-MAP",
+    "L05-TILES",
+    "L05-BOSS",
+    "L05-AUDIO"
+  ]
+}

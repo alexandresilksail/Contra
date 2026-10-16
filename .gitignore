@@ -28,3 +28,6 @@ Thumbs.db
 # local tooling artifacts
 tools/__pycache__/
 vite.config.ts.timestamp-*.mjs
+
+# generated pipeline outputs (regenerable, large, not source)
+tools/assets/out/

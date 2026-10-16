@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "generatedBy": "tools/assets/build-asset-manifest.mjs",
+  "generatedAt": "2026-10-16T10:10:50.836Z",
+  "level": "level-04",
+  "title": "SNOW FIELD（雪原/第四关）",
+  "originalStage": 4,
+  "coverage": "PARTIAL",
+  "notes": "同 level-02：程序化主题美术。",
+  "assets": {},
+  "sharedRefs": {
+    "player.sheet": {
+      "manifest": "../../../manifest.json",
+      "id": "player.sheet"
+    },
+    "weapons.pickups": {
+      "manifest": "../../../manifest.json",
+      "id": "weapons.pickups"
+    }
+  },
+  "gaps": [
+    "L04-BG-MAP",
+    "L04-TILES",
+    "L04-BOSS",
+    "L04-AUDIO"
+  ]
+}
