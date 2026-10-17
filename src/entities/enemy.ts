@@ -1,4 +1,4 @@
-import { GRAVITY, MAX_FALL, PAL, VIEW_H } from '../config/constants';
+import { GRAVITY, MAX_FALL, PAL, VIEW_H, VIEW_W } from '../config/constants';
 import type { WorldCtx } from '../core/world';
 import { buildEnemyArt, type SpriteSet } from '../gfx/sprites';
 import { ledgeAhead, moveAndCollide, onGround as probeGround, wallAhead } from '../systems/collision';
@@ -224,7 +224,12 @@ export function updateEnemy(e: Enemy, dt: number, w: WorldCtx): void {
     e.vy = Math.min(e.vy, MAX_FALL);
   }
 
-  const canSeeTarget = !!target && Math.abs((target.x + target.w / 2) - (e.x + e.w / 2)) < 340;
+  // Enemies may only engage once they are (at least partly) inside the camera
+  // view. Waves spawn units just off-screen; without this check a unit that
+  // pops in behind the player opens fire immediately, which the player cannot
+  // see coming and cannot fairly react to (the original only fires on-screen).
+  const onScreen = e.x + e.w > w.cam.x - 4 && e.x < w.cam.x + VIEW_W + 4;
+  const canSeeTarget = !!target && onScreen && Math.abs((target.x + target.w / 2) - (e.x + e.w / 2)) < 340;
 
   switch (ai) {
     case 'grunt': {
@@ -340,7 +345,10 @@ export function updateEnemy(e: Enemy, dt: number, w: WorldCtx): void {
         e.vx = e.facing * e.def.speed * (canSeeTarget ? 1 : 0.6);
         e.shootCd -= dt;
         if (e.shootCd <= 0 && canSeeTarget) {
-          e.shootCd = 0.16;
+          // 0.5s between bursts (was 0.16s: a point-blank meatgrinder that
+          // could not be reacted to - verified in browser playtesting). The
+          // triple spread stays; it is now dodgeable and punishable.
+          e.shootCd = 0.5;
           const a = aimAt(e, target);
           for (let i = -1; i <= 1; i++) {
             const b = enemyShot(w, e.x + e.w / 2, e.y + e.h * 0.4, a + i * 0.28, 190, {

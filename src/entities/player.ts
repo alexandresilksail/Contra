@@ -542,10 +542,23 @@ export function updatePlayerBullets(w: WorldCtx, dt: number): void {
         // Explosive ordnance detonates on impact (this is what lets the player
         // blow a hole in a Stage-1 bridge deck).
         w.explode(b.x, b.y, b.explode, b.dmg);
-      } else if (t === T.BRIDGE) {
+      } else if (
+        t === T.BRIDGE &&
+        !b.homing &&
+        !b.laser &&
+        // isolated-hole rule (see explodeAt): never breach next to an
+        // existing hole so the crossing stays jumpable
+        !w.level.isDestroyed(tx - 1, ty) &&
+        !w.level.isDestroyed(tx + 1, ty)
+      ) {
         // Plain rifle fire also punches through bridge decking - one plank
         // per hit, exactly like the original: the hole is jumpable, but the
         // river underneath is lethal, so shooting the bridge is a real risk.
+        // Precision rounds (homing/laser) are stopped by the deck without
+        // breaching it: they curve toward targets and would otherwise dive
+        // into the planks under the player's feet (verified in browser
+        // playtesting - homing fire once opened 5 holes and walled off the
+        // crossing).
         if (w.level.destroyTile(tx, ty)) {
           w.particles.burst(tx * TILE + 8, ty * TILE + 8, 6, [PAL.steel, PAL.white, PAL.orange], 90, 0.3, 260);
           w.audio.sfx('explosionSmall');

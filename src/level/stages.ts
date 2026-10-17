@@ -109,10 +109,12 @@ export function buildWaves(def: StageDef): Wave[] {
     const size = 2 + Math.floor(t * 2.4 + rnd() * 1.6);
     const entries: WaveEntry[] = [];
     const groundCount = Math.max(1, Math.floor(size * 0.7));
+    // Stage-1 troops arrive from the front (the running direction) or drop
+    // in on the spot, like the original's fixed jungle encounter set. No
+    // "from behind" spawns: a unit materialising off-screen at the player's
+    // back and opening fire is both unfaithful and unfair (verified in
+    // browser playtesting - it was the main cause of unavoidable deaths).
     entries.push({ kind: rnd.pick(def.enemyPool), count: groundCount, from: 'right', delay: 0 });
-    if (rnd() < 0.45) {
-      entries.push({ kind: rnd.pick(def.enemyPool), count: 1 + Math.floor(rnd() * 2), from: 'left', delay: 0.6 });
-    }
     if (rnd() < 0.3) {
       // spot spawns only use kinds that have an uploaded sprite (the
       // red-commando column of players.png); geometric turret is excluded.

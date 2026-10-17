@@ -332,8 +332,32 @@ export class GameScene {
       }
       x = clamp(x, 10, this.level.pixelW - 40);
       if (this.bossTriggered && x > this.level.bossArenaX() - 40) continue;
+      // Never materialize a unit on top of a living player: an enemy that
+      // spawns overlapping the player deals unavoidable contact damage (the
+      // original always drops units clear of the character). Nudge the spawn
+      // away from the player; if no room, skip this unit.
+      const def = ENEMY_DEFS[kind] ?? ENEMY_DEFS.grunt;
+      let spawnOk = !this.spawnOverlapsPlayer(x, y, def.w, def.h);
+      if (!spawnOk) {
+        const away = x < this.players[0].x + this.players[0].w / 2 ? -1 : 1;
+        const alt = clamp(x + away * 56, 10, this.level.pixelW - 40);
+        spawnOk = !this.spawnOverlapsPlayer(alt, y, def.w, def.h);
+        if (spawnOk) x = alt;
+      }
+      if (!spawnOk) continue;
       this.spawnEnemy(kind, x, y, facing);
     }
+  }
+
+  /** True when an enemy box at (x,y,w,h) would overlap a living player. */
+  private spawnOverlapsPlayer(x: number, y: number, w: number, h: number): boolean {
+    for (const p of this.players) {
+      if (!p.alive) continue;
+      // horizontal gap must clear both bodies; vertical overlap required
+      const px = p.x, pw = p.w, py = p.y, ph = p.h;
+      if (x < px + pw && x + w > px && y < py + ph && y + h > py) return true;
+    }
+    return false;
   }
 
   spawnEnemy(kind: string, x: number, y: number, facing: 1 | -1 = -1): any {
@@ -496,7 +520,8 @@ export class GameScene {
 
     /* enemies -> players (contact) */
     for (const e of enemies) {
-      if (e.dead || e.state === 'death') continue;
+      // spawnGrace: the unit is still dropping in and cannot hurt the player
+      if (e.dead || e.state === 'death' || e.spawnGrace > 0) continue;
       for (const p of this.players) {
         if (!p.alive) continue;
         if (!aabb(p.box, e.box)) continue;
@@ -540,7 +565,11 @@ export class GameScene {
         this.level.destroyTile(tx, ty);
         this.particles.burst(tx * TILE + 8, ty * TILE + 8, 8, [PAL.brown, PAL.sand, PAL.white], 90, 0.35, 300);
         audio.sfx('explosionSmall');
-        if (t === T.HIDDEN && Math.random() < 0.7) {
+        // Pods always yield an item (the original's weapon capsules never
+        // come up empty); the old 0.7 gate made the drop unreliable - a
+        // full-speed run could pass the alcove with nothing in it (verified
+        // in browser playtesting).
+        if (t === T.HIDDEN) {
           this.spawnPickup(tx * TILE, ty * TILE, 'weapon', WEAPON_ORDER[(Math.random() * WEAPON_ORDER.length) | 0]);
         }
         b.dead = true;
@@ -573,7 +602,15 @@ export class GameScene {
       for (let tx = cx - tr; tx <= cx + tr; tx++) {
         const t = this.level.get(tx, ty);
         if (t === T.CRATE) this.level.destroyTile(tx, ty);
-        else if (t === T.BRIDGE && tx === cx) {
+        else if (
+          t === T.BRIDGE &&
+          tx === cx &&
+          // keep every hole isolated: a plank next to an existing hole is
+          // spared so the crossing can never be walled off by a chain of
+          // blasts (each single hole stays jumpable)
+          !this.level.isDestroyed(cx - 1, ty) &&
+          !this.level.isDestroyed(cx + 1, ty)
+        ) {
           this.level.destroyTile(tx, ty);
           this.particles.burst(tx * TILE + 8, ty * TILE + 8, 8, [PAL.steel, PAL.white, PAL.orange], 120, 0.4, 260);
         }

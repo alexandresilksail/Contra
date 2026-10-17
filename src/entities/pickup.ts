@@ -29,7 +29,12 @@ export class Pickup {
     this.y = y;
     this.weapon = weapon ?? 'rapid';
     this.vx = 0;
-    this.vy = -60;
+    // No launch hop: the item materialises where the pod was and settles
+    // immediately (the original's capsules simply appear). The old vy=-60
+    // pop made the item fly over a sprinting player's head and land behind
+    // them - a full-speed run could miss every pod drop (verified in
+    // browser playtesting).
+    this.vy = 0;
     this.animT = 0;
     this.life = 14;
     this.dead = false;
