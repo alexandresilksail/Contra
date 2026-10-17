@@ -6,7 +6,6 @@ import type { CharId } from '../gfx/sprites';
 export type AppState =
   | 'menu'
   | 'charselect'
-  | 'stageselect'
   | 'options'
   | 'keys'
   | 'playing'
@@ -15,6 +14,7 @@ export type AppState =
   | 'ending';
 
 export interface StartOptions {
+  /** stage id; the project ships Stage 1 only (kept for save/continue compat) */
   stage: number;
   chars: [CharId, CharId];
   twoPlayer: boolean;

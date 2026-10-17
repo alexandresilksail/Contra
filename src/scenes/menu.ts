@@ -30,7 +30,7 @@ function cursor(ctx: CanvasRenderingContext2D, x: number, y: number, color = PAL
 /* title                                                               */
 /* ------------------------------------------------------------------ */
 
-const MENU_ITEMS = ['START GAME', 'STAGE SELECT', 'OPTIONS', 'KEY CONFIG', 'HOW TO PLAY'];
+const MENU_ITEMS = ['START GAME', 'OPTIONS', 'KEY CONFIG', 'HOW TO PLAY'];
 
 export class TitleScreen {
   index = 0;
@@ -55,15 +55,12 @@ export class TitleScreen {
           this.host.goto('charselect');
           break;
         case 1:
-          this.host.goto('stageselect');
-          break;
-        case 2:
           this.host.goto('options');
           break;
-        case 3:
+        case 2:
           this.host.goto('keys');
           break;
-        case 4:
+        case 3:
           this.help = !this.help;
           break;
       }
@@ -149,7 +146,6 @@ export class CharSelect {
   pick: [number, number] = [0, 0];
   stage = 0; // 0 = P1 choosing, 1 = P2 choosing
   t = 0;
-  startStage = 1;
 
   constructor(private host: GameHost) {}
 
@@ -166,17 +162,14 @@ export class CharSelect {
       this.pick[cur] = (this.pick[cur] + 1) % CHAR_DEFS.length;
       audio.sfx('menuMove');
     }
-    if (inp.pressed(0, 'up') || inp.pressed(0, 'down')) {
-      this.startStage = Math.max(1, Math.min(this.host.save.maxStageUnlocked, this.startStage + (inp.pressed(0, 'up') ? 1 : -1)));
-      audio.sfx('menuMove');
-    }
     if (inp.pressed(0, 'start') || inp.pressed(0, 'shoot')) {
       audio.sfx('menuSelect');
       if (two && this.stage === 0) {
         this.stage = 1;
       } else {
         const opt: StartOptions = {
-          stage: this.startStage,
+          // single-stage project: always Stage 1
+          stage: 1,
           chars: [CHAR_DEFS[this.pick[0]].id, CHAR_DEFS[this.pick[1]].id] as [CharId, CharId],
           twoPlayer: two,
         };
@@ -209,11 +202,6 @@ export class CharSelect {
       if (this.pick[1] === i && two) drawText(ctx, 'P2', x + 14, 74, { color: PAL.cyan, scale: 1 });
     }
 
-    drawText(ctx, `START STAGE  ${this.startStage}  (W/S)`, VIEW_W / 2, 286, {
-      color: PAL.white,
-      align: 'center',
-      scale: 1,
-    });
     drawText(ctx, 'ENTER CONFIRM    ESC BACK', VIEW_W / 2, VIEW_H - 20, {
       color: PAL.grey,
       align: 'center',
@@ -230,81 +218,6 @@ function buildPortrait(i: number): HTMLCanvasElement {
     portraitCache.set(i, p);
   }
   return p;
-}
-
-/* ------------------------------------------------------------------ */
-/* stage select                                                        */
-/* ------------------------------------------------------------------ */
-
-export class StageSelect {
-  index = 0;
-  constructor(private host: GameHost) {}
-
-  update(): void {
-    const inp = this.host.input;
-    const max = this.host.save.maxStageUnlocked;
-    if (inp.pressed(0, 'left')) {
-      this.index = Math.max(0, this.index - 1);
-      audio.sfx('menuMove');
-    }
-    if (inp.pressed(0, 'right')) {
-      this.index = Math.min(STAGES.length - 1, this.index + 1);
-      audio.sfx('menuMove');
-    }
-    if (inp.pressed(0, 'up')) {
-      this.index = Math.max(0, this.index - 4);
-      audio.sfx('menuMove');
-    }
-    if (inp.pressed(0, 'down')) {
-      this.index = Math.min(STAGES.length - 1, this.index + 4);
-      audio.sfx('menuMove');
-    }
-    if (inp.pressed(0, 'start') || inp.pressed(0, 'shoot')) {
-      if (this.index + 1 <= max) {
-        audio.sfx('menuSelect');
-        this.host.startGame({
-          stage: this.index + 1,
-          chars: [CHAR_DEFS[0].id, CHAR_DEFS[1].id],
-          twoPlayer: this.host.save.settings.players === 2,
-        });
-      } else audio.sfx('hurt');
-    }
-    if (inp.pressed(0, 'pause')) this.host.goto('menu');
-  }
-
-  draw(ctx: CanvasRenderingContext2D): void {
-    drawText(ctx, 'STAGE SELECT', VIEW_W / 2, 22, { color: PAL.yellow, align: 'center', scale: 2 });
-    const max = this.host.save.maxStageUnlocked;
-    for (let i = 0; i < STAGES.length; i++) {
-      const col = i % 4;
-      const row = Math.floor(i / 4);
-      const x = 60 + col * 140;
-      const y = 70 + row * 100;
-      const locked = i + 1 > max;
-      panel(ctx, x, y, 124, 84, this.index === i ? PAL.yellow : locked ? PAL.greyDark : PAL.steelDark);
-      drawText(ctx, STAGES[i].name, x + 62, y + 12, {
-        color: locked ? PAL.greyDark : PAL.white,
-        align: 'center',
-        scale: 1,
-      });
-      drawText(ctx, locked ? 'LOCKED' : STAGES[i].subtitle, x + 62, y + 34, {
-        color: locked ? PAL.red : PAL.cyan,
-        align: 'center',
-        scale: 1,
-      });
-      drawText(ctx, locked ? '****' : STAGES[i].bossName, x + 62, y + 56, {
-        color: locked ? PAL.greyDark : PAL.orange,
-        align: 'center',
-        scale: 1,
-      });
-      if (this.index === i) cursor(ctx, x + 8, y + 12);
-    }
-    drawText(ctx, 'ENTER START STAGE    ESC BACK', VIEW_W / 2, VIEW_H - 20, {
-      color: PAL.grey,
-      align: 'center',
-      scale: 1,
-    });
-  }
 }
 
 /* ------------------------------------------------------------------ */
@@ -497,32 +410,22 @@ export class StageClearScreen {
   update(dt: number): void {
     this.t += dt;
     const inp = this.host.input;
+    // single-stage project: clearing Stage 1 ends the run (arcade-style
+    // "mission complete" fanfare, then the ending screen)
     if (this.t > 0.6 && (inp.pressed(0, 'start') || inp.pressed(0, 'shoot'))) {
-      const next = (this.host.lastStart?.stage ?? 1) + 1;
-      if (next > 8) {
-        audio.sfx('victory');
-        this.host.goto('ending');
-      } else {
-        audio.sfx('menuSelect');
-        this.host.startGame({
-          stage: next,
-          chars: this.host.lastStart?.chars ?? ['razor', 'titan'],
-          twoPlayer: this.host.lastStart?.twoPlayer ?? false,
-          continueUsed: this.host.continueUsed,
-        });
-      }
+      audio.sfx('victory');
+      this.host.goto('ending');
     }
   }
   draw(ctx: CanvasRenderingContext2D): void {
-    const st = this.host.lastStart?.stage ?? 1;
     drawText(ctx, 'STAGE CLEAR', VIEW_W / 2, 70, { color: PAL.yellow, shadow: PAL.black, align: 'center', scale: 4 });
-    drawText(ctx, `${STAGES[st - 1].name}  ${STAGES[st - 1].subtitle}`, VIEW_W / 2, 116, {
+    drawText(ctx, `${STAGES[0].name}  ${STAGES[0].subtitle}`, VIEW_W / 2, 116, {
       color: PAL.white,
       align: 'center',
       scale: 1,
     });
     panel(ctx, 200, 150, 240, 80);
-    drawText(ctx, `NEXT  STAGE ${Math.min(8, st + 1)}`, VIEW_W / 2, 168, { color: PAL.cyan, align: 'center', scale: 1 });
+    drawText(ctx, 'MISSION COMPLETE', VIEW_W / 2, 168, { color: PAL.cyan, align: 'center', scale: 1 });
     if (this.t % 1 < 0.6) drawText(ctx, 'PRESS ENTER', VIEW_W / 2, 200, { color: PAL.orange, align: 'center', scale: 1 });
     drawText(ctx, `HI ${this.host.save.highScore}`, VIEW_W / 2, 250, { color: PAL.grey, align: 'center', scale: 1 });
   }

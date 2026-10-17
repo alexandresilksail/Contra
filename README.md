@@ -1,8 +1,12 @@
-# IRON STORM ⚔️
+# IRON STORM ⚔️ — 原版《Contra》第一关复刻
 
-一款**原创**的 8/16-bit 风格横版 **Run-and-Gun（跑打）射击游戏**，使用 HTML5 Canvas 2D + TypeScript + Vite 从零构建。
+一款**原版《魂斗罗》（Contra，1987 年街机 / 1988 年 FC 版）第一关的忠实复刻**项目，使用 HTML5 Canvas 2D + TypeScript + Vite 从零构建，**仅供个人学习与研究**。
 
-> 本项目所有美术、音乐、代码均为**原创**，不依赖任何第三方素材或受版权保护的资源——全部像素图、音效与关卡均通过代码程序化生成。
+> **复刻基准**：NES / FC 版《魂斗罗》（用户合法取得的原版游戏，逐项对照）。对照基准与逐项保真度状态见：
+> - [`docs/stage1-reference-baseline.md`](docs/stage1-reference-baseline.md) — 原版第一关事实清单（信息来源与确信度标注）
+> - [`docs/stage1-fidelity-checklist.md`](docs/stage1-fidelity-checklist.md) — 逐项完成状态 / 验证方式 / 未解决差异
+>
+> **版权边界**：项目代码、程序化美术与音乐均为原创；原版的代码、图像、音乐等受版权保护内容**未经许可不得公开发布、分发或商用**。本地参考素材仅用于开发对照，不入库（见下文「可选素材包」）。
 
 ---
 
@@ -10,11 +14,12 @@
 
 | 类别 | 内容 |
 | --- | --- |
+| 关卡 | **仅第一关**（"FORTRESS GATE"）：216 列 = 原版全景图 1:1 提取，世界锁定绘制 |
+| 地形 | 双可破坏金属桥（每发炸 1 板）、致命河水（落水即溺）、火箭舱面板、Boss 门 |
 | 角色 | 2 名可选角色：`RAZOR`（高速 / 稳定）、`TITAN`（重火力 / 低后坐） |
-| 敌人 | 15 种原创敌人，各自独立 AI（grunt / runner / heavy / sniper / shield / bomber / jumper / flame / turret / flyer / spider / mech / roller / drone / worm） |
-| Boss | 8 个 Boss，每个含 **3 个阶段** + 漂移弱点机制 |
-| 武器 | 7 种（步枪 / 速射 / 散射 / 穿透 / 爆破 / 激光 / 追踪） |
-| 关卡 | 8 个完整关卡，含视差滚屏、镜头跟随、强制卷轴关（Stage 5） |
+| 敌人 | 8 种第一关敌人（grunt / runner / heavy / sniper / shield / bomber / jumper / flame），独立 AI |
+| Boss | 1 个（BASE COMMANDER），单屏竞技场 + 独立战斗 BGM |
+| 武器 | 7 种（步枪 / 速射 / 散射 / 穿透 / 爆破 / 激光 / 追踪），8 向瞄准 |
 | 合作 | 本地双人合作（P1 + P2），独立生命 / 武器 / 复活 |
 | 系统 | 生命 / Game Over / Continue（续关，最多 3 次）/ 得分 / 额外生命 |
 | 调试 | 调试模式（`F1`–`F8`） |
@@ -111,9 +116,9 @@ npm test         # 等价于 vitest run（node 环境下无头运行）
 
 - 射击木箱（CRATE）可获得武器与补给（武器从 7 种中随机掉落）。
 - **Boss 弱点**：攻击发光的黄色弱点圈可造成 **2.2 倍**伤害；命中普通部位为 **0.8 倍**。
-- 每关推进到竞技场入口即触发 Boss 战，镜头锁定并展开 3 阶段战斗。
+- 推进到竞技场入口（col 100，裂缝之前）即触发 Boss 战，镜头锁定单屏并展开战斗。
 - 得分累计达到阈值（每 20000 分）可获得额外生命。
-- 通关全部 8 关后进入结局画面。
+- 击败 Boss → 通关第一关 → 结局画面（项目仅含第一关）。
 
 ---
 
@@ -124,7 +129,8 @@ npm test         # 等价于 vitest run（node 环境下无头运行）
 - **对象池**：子弹 / 敌人 / 粒子均使用对象池，避免逐帧内存分配与 GC 抖动。
 - **碰撞系统**：轴分离的 AABB 对瓦片地图碰撞 + 子步进（sub-stepping），并修复了静止贴地时的接地抖动。
 - **程序化像素美术**：所有精灵、背景、字体均由离屏 Canvas 在启动时绘制，无需任何外部图片/音频文件。
-- **存档**：`localStorage` 持久化（含内存回退），保存设置、按键绑定、最高分与解锁关卡。
+- **图片 = 视觉权威，独立数据 = 交互权威**：第一关地图图片（本地素材）1:1 世界锁定绘制；碰撞数据由 `tools/stage1_extract.py` 从图片数值化提取到 `src/level/stage1ImageData.ts`。
+- **存档**：`localStorage` 持久化（含内存回退），保存设置、按键绑定与最高分。
 
 ---
 
@@ -139,12 +145,12 @@ public/sprites/
 ├── players.png   # 角色精灵表（覆盖 idle / run / jump / fall / crouch / climb / dead / 选人立绘）
 ├── pickups.png   # 武器胶囊图标（5 个，按 x = 0/25/50/75/100 切片）
 ├── title.png     # 标题字标（色键抠底后替换程序化 Logo）
-├── stage1bg.png  # Stage 1 全景背景（视差滚动层，底部白边自动裁切）
-├── tiles1.png    # Stage 1 瓦片（地面草皮/岩石填充/薄台/水面动画，黑 = 透明键）
-└── wall1.png     # Stage 1 Boss「DEFENSE WALL」整体贴图（自动缩放至 Boss 判定框）
+├── stage1bg.png  # 第一关全景背景（= 完整关卡布局图，1:1 世界锁定绘制，底部白边自动裁切）
+├── tiles1.png    # 第一关瓦片（地面草皮/岩石填充/薄台/水面动画，黑 = 透明键）
+└── wall1.png     # 第一关 Boss「DEFENSE WALL」整体贴图（自动缩放至 Boss 判定框）
 ```
 
-- 该目录已写入 `.gitignore`，**仓库不包含任何图片文件**；请自行放入你**合法获得**的素材。
+- 该目录已写入 `.gitignore`，**仓库不包含任何图片文件**；请自行放入你**合法获得**的素材（复刻对照用）。
 - 所有切片坐标集中在 `src/gfx/pack.ts`（`PACK_MAP` / `TITLE_LOGO` / `T1`）；若某个姿态或瓦片不对，只改那里的数字即可，无需动其他代码。
 - 素材表的不透明底板由 `slice()` 自动色键抠除（每张表有自己的键色与容差，见 `KEY_COLORS`）。
 - 仓库默认状态（无素材）就是纯程序化原创版本。
@@ -163,7 +169,7 @@ iron-storm/
 ├── src/
 │   ├── main.ts             # 引导入口，创建 Game 并 boot
 │   ├── game.ts             # 顶层编排：场景切换、暂停、全屏、缩放
-│   ├── audio/audio.ts      # 程序化音效与音乐（WebAudio）
+│   ├── audio/audio.ts      # 程序化音效与音乐（WebAudio，原创 Chiptune）
 │   ├── config/constants.ts # 全局常量（分辨率、物理、调色板等）
 │   ├── core/
 │   │   ├── input.ts        # 输入系统（双玩家、按键绑定、捕获）
@@ -173,8 +179,8 @@ iron-storm/
 │   │   └── world.ts        # 世界上下文类型（供实体/系统共享）
 │   ├── entities/
 │   │   ├── player.ts       # 玩家（移动/跳跃/8 方向瞄准/射击）
-│   │   ├── enemy.ts        # 15 种敌人 AI
-│   │   ├── boss.ts         # 8 个 Boss + 3 阶段攻击脚本 + 弱点
+│   │   ├── enemy.ts        # 敌人 AI
+│   │   ├── boss.ts         # Boss + 阶段攻击脚本 + 弱点
 │   │   ├── bullet.ts       # 子弹池与更新
 │   │   └── pickup.ts       # 武器/生命/得分拾取
 │   ├── gfx/
@@ -182,20 +188,23 @@ iron-storm/
 │   │   ├── sprites.ts      # 程序化生成角色/敌人/Boss/背景/瓦片
 │   │   └── font.ts         # 位图字体
 │   ├── level/
-│   │   ├── level.ts        # 关卡运行时（瓦片碰撞、梯子、危险物、手绘地图混入）
-│   │   ├── layouts.ts      # Stage 1 手绘地图（按原版丛林流程编排：出生走廊/河流双桥/高地/堡垒门）
-│   │   ├── stages.ts       # 8 关定义 + 波次生成
+│   │   ├── level.ts        # 关卡运行时（瓦片碰撞、梯子、危险物）
+│   │   ├── layouts.ts      # 第一关手绘地图（数据来自图片提取）
+│   │   ├── stages.ts       # 仅第一关定义 + 波次生成
 │   │   └── tiles.ts        # 瓦片类型与主题
 │   ├── scenes/
 │   │   ├── game.ts         # 核心玩法场景（波次/Boss/碰撞/拾取/调试/通关）
-│   │   ├── menu.ts         # 标题/选人/选关/选项/按键/结算/结局
+│   │   ├── menu.ts         # 标题/选人/选项/按键/结算/结局
 │   │   └── types.ts        # 场景与宿主（GameHost）类型
 │   ├── systems/
-│   │   ├── camera.ts       # 镜头跟随、竞技场锁定、强制卷轴、震屏
+│   │   ├── camera.ts       # 镜头跟随、竞技场锁定、震屏
 │   │   ├── collision.ts    # 轴分离 AABB 碰撞
 │   │   └── particles.ts    # 粒子特效
 │   ├── ui/hud.ts           # 抬头显示（生命/武器/分数/Boss 血条）
 │   └── weapons/weapons.ts  # 7 种武器定义
+├── docs/
+│   ├── stage1-reference-baseline.md   # 原版第一关对照基准（版本裁定 + 事实清单）
+│   └── stage1-fidelity-checklist.md   # 逐项保真度状态与未解决差异
 └── tests/
     ├── setup/dom.ts        # Vitest 无头 DOM/Canvas 桩
     ├── collision.test.ts   # 碰撞单元测试
@@ -203,7 +212,10 @@ iron-storm/
     ├── entities.test.ts    # 实体单元测试
     ├── level.test.ts       # 关卡/波次测试
     ├── player.test.ts      # 玩家移动/跳跃/8 方向瞄准测试
-    └── integration.test.ts # 集成测试：8 关启动刷怪+Boss、Boss 击杀→通关、F4 跳关
+    ├── stage1Fidelity.test.ts # 第一关保真度专项（双桥/致命水/破坏/竞技场平整）
+    ├── traversal.test.ts   # 无头机器人从出生点跑到 Boss 门
+    ├── acceptance.test.ts  # 触发 Boss → 纯伤害击杀 → 通关全流程
+    └── integration.test.ts # 集成测试：启动刷怪+Boss、Boss 击杀→通关、F4 跳关
 ```
 
 ---
@@ -211,7 +223,10 @@ iron-storm/
 ## ✅ 测试
 
 - **单元测试**：碰撞、核心工具、实体、关卡、玩家——覆盖数值、边界与瞄准逻辑。
-- **集成测试**（`integration.test.ts`）：在无头环境中模拟 8 个关卡启动、刷出敌人、Boss 生成；以及完整的「触发 Boss → 击杀 → 通关」流程与 `F4` 跳关流程。
+- **保真度测试**（`stage1Fidelity.test.ts`）：双桥结构、致命河水、桥板可破坏、竞技场平整度等逐项断言。
+- **遍历测试**（`traversal.test.ts`）：无头机器人从出生点实际跑到 Boss 门（真实可通关性）。
+- **验收测试**（`acceptance.test.ts`）：触发 Boss → 仅用普通伤害击杀 → 通关全流程。
+- **浏览器实测**：`tools/accept_stage1.mjs`（Playwright 真实浏览器完整通关）。
 
 运行：
 
@@ -219,8 +234,10 @@ iron-storm/
 npm test
 ```
 
+> 注意：无头模拟测试 ≠ 完整通关验收。像素级画面与音频时序以浏览器实测为准，逐项状态见保真度清单。
+
 ---
 
 ## 📜 许可证
 
-本项目为**原创作品**，仅供学习与非商业用途。
+本项目为**原创作品**（代码 / 程序化美术 / 程序化音乐），仅供学习与非商业用途。复刻对象《魂斗罗》的版权归 Konami 所有；未经许可，不得将原版代码、图像、音乐等受版权保护的内容公开发布、分发或用于商业项目。

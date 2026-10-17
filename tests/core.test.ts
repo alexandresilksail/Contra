@@ -88,21 +88,20 @@ describe('save data', () => {
   it('round-trips through the store', () => {
     const data = Save.load();
     data.highScore = 12345;
-    data.maxStageUnlocked = 4;
     Save.save(data);
     const back = Save.load();
     expect(back.highScore).toBe(12345);
-    expect(back.maxStageUnlocked).toBe(4);
+    expect(back.maxStageUnlocked).toBe(1);
     Save.reset();
   });
 
   it('sanitizes corrupted values', () => {
     const data = Save.load();
-    data.maxStageUnlocked = 99;
     data.highScore = -5;
     Save.save({ ...data, maxStageUnlocked: 99, highScore: -5 } as never);
     const back = Save.load();
-    expect(back.maxStageUnlocked).toBeLessThanOrEqual(8);
+    // stage progression removed: any stored value collapses to 1
+    expect(back.maxStageUnlocked).toBe(1);
     expect(back.highScore).toBeGreaterThanOrEqual(0);
     Save.reset();
   });

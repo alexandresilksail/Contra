@@ -1,14 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { Level, generateChunk, openBossDoor } from '../src/level/level';
+import { Level, openBossDoor } from '../src/level/level';
 import { STAGES, buildWaves, stageDef } from '../src/level/stages';
 import { T, isBlocking } from '../src/level/tiles';
-import { CHUNK_TILES, GROUND_ROW, LEVEL_ROWS, TILE } from '../src/config/constants';
+import { CHUNK_TILES, GROUND_ROW, LEVEL_ROWS, TILE, VIEW_W } from '../src/config/constants';
 
 describe('stage definitions', () => {
-  it('has 8 stages with unique bosses', () => {
-    expect(STAGES.length).toBe(8);
+  it('ships Stage 1 only', () => {
+    expect(STAGES.length).toBe(1);
     const ids = new Set(STAGES.map((s) => s.bossId));
-    expect(ids.size).toBe(8);
+    expect(ids.size).toBe(1);
     STAGES.forEach((s, i) => expect(s.id).toBe(i + 1));
   });
 
@@ -28,14 +28,7 @@ describe('stage definitions', () => {
   });
 });
 
-describe('chunk generation', () => {
-  it('is deterministic for the same chunk index', () => {
-    const def = stageDef(1);
-    const a = generateChunk(def, 5);
-    const b = generateChunk(def, 5);
-    expect(Array.from(a)).toEqual(Array.from(b));
-  });
-
+describe('authored stage 1 layout', () => {
   it('produces a walkable ground band with jumpable pits', () => {
     for (const s of STAGES) {
       const level = new Level(s);
@@ -50,13 +43,15 @@ describe('chunk generation', () => {
           gap = 0;
         }
       }
-      // a jump covers ~5 tiles of horizontal distance: never generate more
+      // a jump covers ~5 tiles of horizontal distance: the traversable
+      // stretch (spawn -> boss gate) never asks for more. The ravine past
+      // the gate is deliberately lethal and is never crossed.
       expect(longestGap).toBeLessThanOrEqual(5);
     }
   });
 
   it('never generates terrain above the ceiling row', () => {
-    const level = new Level(stageDef(3));
+    const level = new Level(stageDef(1));
     for (let c = 0; c < 40; c++) {
       for (let r = 0; r < 4; r++) {
         expect(level.get(c, r)).toBe(T.EMPTY);
@@ -64,13 +59,19 @@ describe('chunk generation', () => {
     }
   });
 
-  it('keeps the boss arena flat and pit free', () => {
-    const s = stageDef(2);
+  it('keeps the single-screen boss arena flat and pit free', () => {
+    const s = stageDef(1);
     const level = new Level(s);
     openBossDoor(level);
-    for (let col = s.bossStart; col < s.tiles; col++) {
-      expect(level.groundRow(col)).toBe(GROUND_ROW);
+    // arena = [bossStart, bossStart + VIEW_W/TILE) - the camera locks here
+    const arenaCols = Math.floor(VIEW_W / TILE);
+    const floor = level.groundRow(s.bossStart);
+    expect(floor).toBeLessThan(LEVEL_ROWS);
+    for (let col = s.bossStart; col < s.bossStart + arenaCols; col++) {
+      expect(level.groundRow(col), `arena col ${col} not flat`).toBe(floor);
     }
+    // the gate column keeps its floor once the door opens (no cave-in hole)
+    expect(level.groundRow(s.bossStart)).toBe(floor);
   });
 
   it('creates a boss door that can be opened', () => {
@@ -82,23 +83,6 @@ describe('chunk generation', () => {
     openBossDoor(level);
     for (let r = 0; r < LEVEL_ROWS; r++) expect(level.get(s.bossStart, r)).not.toBe(T.DOOR);
     expect(level.doorOpen).toBe(true);
-  });
-
-  it('generates platforms, ladders and props', () => {
-    let platforms = 0;
-    let ladders = 0;
-    let crates = 0;
-    const level = new Level(stageDef(2));
-    for (let c = 0; c < 200; c++)
-      for (let r = 0; r < LEVEL_ROWS; r++) {
-        const t = level.get(c, r);
-        if (t === T.PLATFORM) platforms++;
-        if (t === T.LADDER) ladders++;
-        if (t === T.CRATE || t === T.HIDDEN) crates++;
-      }
-    expect(platforms).toBeGreaterThan(20);
-    expect(ladders).toBeGreaterThan(5);
-    expect(crates).toBeGreaterThan(0);
   });
 
   it('caches chunks and reports bounds in pixels', () => {
@@ -131,7 +115,7 @@ describe('wave building', () => {
   });
 
   it('increases enemy counts as the stage progresses', () => {
-    const s = stageDef(5);
+    const s = stageDef(1);
     const waves = buildWaves(s);
     const counts = waves.map((w) => w.entries.reduce((n, e) => n + e.count, 0));
     const first = counts[0];

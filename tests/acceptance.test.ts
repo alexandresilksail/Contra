@@ -7,6 +7,7 @@ import { isBlocking, T } from '../src/level/tiles';
 import { LEVEL_ROWS, START_LIVES, TILE } from '../src/config/constants';
 import { BOSS_DEFS, Boss, damageBoss } from '../src/entities/boss';
 import { WEAPON_ORDER } from '../src/weapons/weapons';
+import { STAGE_COUNT } from '../src/level/stages';
 
 /* ------------------------------------------------------------------ */
 /* harness (mirrors traversal.test.ts so all suites share one contract) */
@@ -114,7 +115,7 @@ function approachStep(scene: GameScene, input: FakeInput, targetX: number, aimUp
 /* ------------------------------------------------------------------ */
 
 describe('Phase 5: every boss can be defeated by ordinary damage', () => {
-  for (let stage = 1; stage <= 8; stage++) {
+  for (let stage = 1; stage <= STAGE_COUNT; stage++) {
     it(`stage ${stage}: spawn -> traverse -> boss dies by damage -> stage clear`, () => {
       const input = new FakeInput();
       const { host, log } = makeHost(input);

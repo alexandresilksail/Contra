@@ -11,7 +11,6 @@ import {
   KeysScreen,
   OptionsScreen,
   StageClearScreen,
-  StageSelect,
   TitleScreen,
 } from './scenes/menu';
 import type { AppState, GameHost, StartOptions } from './scenes/types';
@@ -29,7 +28,6 @@ export class Game implements GameHost {
   scene: GameScene;
   title: TitleScreen;
   charSel: CharSelect;
-  stageSel: StageSelect;
   options: OptionsScreen;
   keys: KeysScreen;
   stageClear: StageClearScreen;
@@ -48,7 +46,6 @@ export class Game implements GameHost {
     this.scene = new GameScene(this);
     this.title = new TitleScreen(this);
     this.charSel = new CharSelect(this);
-    this.stageSel = new StageSelect(this);
     this.options = new OptionsScreen(this);
     this.keys = new KeysScreen(this);
     this.stageClear = new StageClearScreen(this);
@@ -139,9 +136,6 @@ export class Game implements GameHost {
       case 'charselect':
         this.charSel.update(dt);
         break;
-      case 'stageselect':
-        this.stageSel.update();
-        break;
       case 'options':
         this.options.update();
         break;
@@ -172,9 +166,6 @@ export class Game implements GameHost {
         break;
       case 'charselect':
         this.charSel.draw(ctx);
-        break;
-      case 'stageselect':
-        this.stageSel.draw(ctx);
         break;
       case 'options':
         this.options.draw(ctx);

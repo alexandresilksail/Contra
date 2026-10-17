@@ -14,7 +14,8 @@ export interface Settings {
 
 export interface SaveData {
   highScore: number;
-  maxStageUnlocked: number; // 1..8
+  /** vestigial since the project ships Stage 1 only; kept so old saves load */
+  maxStageUnlocked: number; // always 1
   settings: Settings;
   keys: Record<0 | 1, BindingMap>;
   bestTimeByStage: number[];
@@ -42,7 +43,7 @@ function sanitize(raw: any): SaveData {
   const s = raw.settings ?? {};
   return {
     highScore: Number.isFinite(raw.highScore) ? Math.max(0, Math.floor(raw.highScore)) : 0,
-    maxStageUnlocked: Number.isFinite(raw.maxStageUnlocked) ? Math.min(8, Math.max(1, Math.floor(raw.maxStageUnlocked))) : 1,
+    maxStageUnlocked: 1, // stage progression removed; old values collapse to 1
     settings: {
       musicVolume: clamp01(s.musicVolume, base.settings.musicVolume),
       sfxVolume: clamp01(s.sfxVolume, base.settings.sfxVolume),

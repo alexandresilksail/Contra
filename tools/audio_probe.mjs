@@ -8,7 +8,7 @@
  *   A03  holding fire synthesises SFX voices; they retire to zero afterwards
  *   A04  Escape pauses music keeping position; unpause resumes from it
  *   A05  boss track switch (playTrack(BOSS_TRACK))
- *   A06  stage switch swaps the theme
+ *   A06  restarting the stage re-plays the stage-1 theme
  *   A07  master volume + mute from persisted settings
  *   A08  vendor (Open Gunner) asset decodes through the runtime registry
  *   A09  zero console/page errors
@@ -91,23 +91,23 @@ record(
   JSON.stringify({ paused, stillPaused, resumed }),
 );
 
-// ---- A05: boss track switch ----
+// ---- A05: boss track switch (playTrack(BOSS_TRACK) === 1) ----
 const a05 = await page.evaluate(() => {
   const a = window.__IRONSTORM__.audio;
-  a.playTrack(8);
+  a.playTrack(1); // BOSS_TRACK (stage-1-only build: TRACKS = [stage1, boss])
   return { track: a.currentTrack, playing: a.playing };
 });
-record('A05 boss track', a05.track === 8 && a05.playing, JSON.stringify(a05));
+record('A05 boss track', a05.track === 1 && a05.playing, JSON.stringify(a05));
 
-// ---- A06: stage switch swaps the theme ----
-await page.evaluate(() => window.__IRONSTORM__.startGame({ stage: 3, chars: ['razor', 'titan'], twoPlayer: false }));
+// ---- A06: restarting the stage re-plays the stage-1 theme ----
+await page.evaluate(() => window.__IRONSTORM__.startGame({ stage: 1, chars: ['razor', 'titan'], twoPlayer: false }));
 await sleep(700);
 const a06 = await page.evaluate(() => {
   const a = window.__IRONSTORM__.audio;
   return { track: a.currentTrack, playing: a.playing };
 });
-record('A06 stage3 theme', a06.track === 2 && a06.playing, JSON.stringify(a06));
-await page.screenshot({ path: `${OUT}aud_2_stage3.png` });
+record('A06 stage1 theme replay', a06.track === 0 && a06.playing, JSON.stringify(a06));
+await page.screenshot({ path: `${OUT}aud_2_stage1.png` });
 
 // ---- A07: persisted master volume + mute ----
 await page.evaluate(() => {

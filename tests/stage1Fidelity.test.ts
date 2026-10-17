@@ -4,7 +4,7 @@ import type { GameHost } from '../src/scenes/types';
 import { defaultSave } from '../src/core/save';
 import { audio } from '../src/audio/audio';
 import { Level } from '../src/level/level';
-import { stageDef } from '../src/level/stages';
+import { STAGES, stageDef } from '../src/level/stages';
 import { T, isBlocking, isDestructible } from '../src/level/tiles';
 import { GROUND_ROW, LEVEL_ROWS, VIEW_H } from '../src/config/constants';
 import { damageEnemy } from '../src/entities/enemy';
@@ -57,9 +57,9 @@ const FIXED = 1 / 60;
 /* ------------------------------------------------------------------ */
 
 describe('Stage 1 fidelity: lethal water (Player 下落)', () => {
-  it('marks stage 1 water lethal and stages 2-8 wadeable', () => {
+  it('marks stage 1 water lethal (the only stage - drowning like the original)', () => {
     expect(new Level(stageDef(1)).deadlyWater).toBe(true);
-    for (let s = 2; s <= 8; s++) expect(new Level(stageDef(s)).deadlyWater).toBe(false);
+    expect(STAGES.length).toBe(1);
   });
 
   it('the river under each bridge is WATER below a BRIDGE deck', () => {
@@ -157,13 +157,13 @@ describe('Stage 1 fidelity: distinct boss music (音乐)', () => {
       const input = new FakeInput();
       const scene = new GameScene(makeHost(input));
       scene.start({ stage: 1, chars: ['razor', 'razor'], twoPlayer: false, continueUsed: 0 });
-      expect(scene.def.bossMusic).toBe(8); // the original boss-battle theme
+      expect(scene.def.bossMusic).toBe(1); // BOSS_TRACK - the original boss-battle theme
       expect(scene.def.music).toBe(0);
       // walk into the boss gate trigger zone
       scene.players[0].place(1500, 300);
       for (let f = 0; f < 5 && !scene.boss; f++) scene.update(FIXED);
       expect(scene.boss).toBeTruthy();
-      expect(spy).toHaveBeenCalledWith(8); // boss track, not the stage track
+      expect(spy).toHaveBeenCalledWith(1); // boss track (BOSS_TRACK), not the stage track
     } finally {
       spy.mockRestore();
     }

@@ -1,16 +1,13 @@
 import { TILE } from '../config/constants';
 import { rngFrom } from '../core/math';
-import {
-  stage1Map,
-  stage2Map,
-  stage3Map,
-  stage4Map,
-  stage5Map,
-  stage6Map,
-  stage7Map,
-  stage8Map,
-} from './layouts';
+import { stage1Map } from './layouts';
 
+/**
+ * Stage 1 only. The project is a faithful replica of the original Contra
+ * (NES/FC version - see docs/stage1-reference-baseline.md) opening stage;
+ * stages 2-8 were dropped on purpose (git history keeps them, tag
+ * backup/pre-stage1-pivot-5244009 marks the pre-pivot tree).
+ */
 export interface WaveEntry {
   kind: string;
   count: number;
@@ -32,13 +29,7 @@ export interface StageDef {
   theme: string;
   seed: number;
   tiles: number;
-  terrain: number; // 0 = flat, 1 = hilly
-  pitChance: number;
-  water: number;
-  crates: number;
-  spikes: number;
   enemyPool: string[];
-  flyerPool: string[];
   density: number; // waves per 100 tiles
   bossStart: number;
   bossId: string;
@@ -49,11 +40,11 @@ export interface StageDef {
   bossMusic?: number;
   /** water is lethal on contact (drowning) instead of wadeable */
   deadlyWater?: boolean;
-  /** forced-scroll section: [startTile, endTile, speedPxPerSec] */
-  scroll?: [number, number, number];
-  /** hand-authored tile map (returns the full column-major grid); skips procgen */
+  /** hand-authored tile map (returns the full column-major grid) */
   layout?: typeof stage1Map;
 }
+
+export const STAGE_COUNT = 1;
 
 export const STAGES: StageDef[] = [
   {
@@ -65,17 +56,11 @@ export const STAGES: StageDef[] = [
     // 216 columns == the exact width of the uploaded map image (3456px / 16),
     // which is the level layout itself and is drawn 1:1 by the renderer.
     tiles: 216,
-    terrain: 0.4,
-    pitChance: 0.22,
-    water: 0.1,
-    crates: 1,
-    spikes: 0.12,
     // Stage 1 only uses enemy kinds that have an uploaded sprite sheet (the
     // red-commando column of players.png). turret/flyer/mech have no uploaded
     // art, so they fall back to procedural geometry - which the spec forbids -
     // hence they are excluded here. See docs/asset-manifest.md.
     enemyPool: ['grunt', 'runner', 'heavy', 'sniper', 'shield', 'bomber', 'jumper', 'flame'],
-    flyerPool: [],
     density: 1.5,
     // Boss gate sits BEFORE the ravine (pits at cols 144-169). The arena is the
     // single screen [100, 139]; the camera locks there, so the ravine and the
@@ -89,164 +74,9 @@ export const STAGES: StageDef[] = [
     // composition - Konami's boss BGM cannot be used) instead of just
     // speeding up the stage track, and lethal water (drowning) like the
     // original, including the river under the two bridges.
-    bossMusic: 8,
+    bossMusic: 1, // BOSS_TRACK
     deadlyWater: true,
     layout: stage1Map,
-  },
-  {
-    id: 2,
-    name: 'STAGE 2',
-    subtitle: 'JUNGLE INFILTRATION',
-    theme: 'forest',
-    seed: 202,
-    tiles: 320,
-    terrain: 0.8,
-    pitChance: 0.3,
-    water: 0.35,
-    crates: 0.8,
-    spikes: 0.2,
-    enemyPool: ['grunt', 'runner', 'jumper', 'sniper', 'spider'],
-    flyerPool: ['flyer', 'drone'],
-    density: 1.7,
-    bossStart: 272,
-    bossId: 'guardian',
-    bossName: 'FOREST GUARDIAN',
-    bossHp: 130,
-    music: 1,
-    layout: stage2Map,
-  },
-  {
-    id: 3,
-    name: 'STAGE 3',
-    subtitle: 'IRON FOUNDRY',
-    theme: 'factory',
-    seed: 303,
-    tiles: 330,
-    terrain: 0.5,
-    pitChance: 0.26,
-    water: 0.15,
-    crates: 1.4,
-    spikes: 0.3,
-    enemyPool: ['grunt', 'heavy', 'turret', 'roller', 'flame'],
-    flyerPool: ['drone', 'flyer'],
-    density: 1.9,
-    bossStart: 282,
-    bossId: 'crawler',
-    bossName: 'FOUNDRY CRAWLER',
-    bossHp: 160,
-    music: 2,
-    layout: stage3Map,
-  },
-  {
-    id: 4,
-    name: 'STAGE 4',
-    subtitle: 'UNDERGROUND CAVERN',
-    theme: 'cavern',
-    seed: 404,
-    tiles: 340,
-    terrain: 0.9,
-    pitChance: 0.34,
-    water: 0.3,
-    crates: 0.6,
-    spikes: 0.4,
-    enemyPool: ['spider', 'worm', 'jumper', 'sniper', 'shield'],
-    flyerPool: ['drone'],
-    density: 2.0,
-    bossStart: 292,
-    bossId: 'worm',
-    bossName: 'CAVERN MAW',
-    bossHp: 190,
-    music: 3,
-    layout: stage4Map,
-  },
-  {
-    id: 5,
-    name: 'STAGE 5',
-    subtitle: 'RUINED CITY',
-    theme: 'city',
-    seed: 505,
-    tiles: 350,
-    terrain: 0.6,
-    pitChance: 0.28,
-    water: 0.12,
-    crates: 1.2,
-    spikes: 0.3,
-    enemyPool: ['grunt', 'heavy', 'sniper', 'shield', 'bomber', 'roller'],
-    flyerPool: ['flyer', 'drone'],
-    density: 2.1,
-    bossStart: 302,
-    bossId: 'gunship',
-    bossName: 'SKY GUNSHIP',
-    bossHp: 220,
-    music: 4,
-    scroll: [120, 190, 62],
-    layout: stage5Map,
-  },
-  {
-    id: 6,
-    name: 'STAGE 6',
-    subtitle: 'FROZEN STRONGHOLD',
-    theme: 'snow',
-    seed: 606,
-    tiles: 360,
-    terrain: 1,
-    pitChance: 0.36,
-    water: 0.25,
-    crates: 1,
-    spikes: 0.45,
-    enemyPool: ['heavy', 'shield', 'sniper', 'mech', 'bomber', 'jumper'],
-    flyerPool: ['drone', 'flyer'],
-    density: 2.2,
-    bossStart: 312,
-    bossId: 'frostcore',
-    bossName: 'FROST CORE',
-    bossHp: 250,
-    music: 5,
-    layout: stage6Map,
-  },
-  {
-    id: 7,
-    name: 'STAGE 7',
-    subtitle: 'ALIEN HIVE',
-    theme: 'alien',
-    seed: 707,
-    tiles: 370,
-    terrain: 0.7,
-    pitChance: 0.32,
-    water: 0.2,
-    crates: 0.7,
-    spikes: 0.4,
-    enemyPool: ['spider', 'worm', 'bomber', 'mech', 'shield', 'jumper'],
-    flyerPool: ['drone', 'flyer'],
-    density: 2.3,
-    bossStart: 322,
-    bossId: 'hivemind',
-    bossName: 'HIVE MIND',
-    bossHp: 280,
-    music: 6,
-    layout: stage7Map,
-  },
-  {
-    id: 8,
-    name: 'STAGE 8',
-    subtitle: 'FINAL STRONGHOLD',
-    theme: 'finalbase',
-    seed: 808,
-    tiles: 400,
-    terrain: 0.5,
-    pitChance: 0.3,
-    water: 0.1,
-    crates: 1.3,
-    spikes: 0.5,
-    enemyPool: ['heavy', 'mech', 'shield', 'sniper', 'bomber', 'roller', 'grunt'],
-    flyerPool: ['drone', 'flyer'],
-    density: 2.5,
-    bossStart: 350,
-    bossId: 'doomcore',
-    bossName: 'DOOM CORE',
-    bossHp: 340,
-    music: 7,
-    layout: stage8Map,
   },
 ];
 
@@ -254,16 +84,16 @@ export function stageDef(id: number): StageDef {
   return STAGES[Math.max(0, Math.min(STAGES.length - 1, id - 1))];
 }
 
-/** Deterministic wave layout for a stage. */
+/** Deterministic wave layout for the stage. */
 export function buildWaves(def: StageDef): Wave[] {
   const waves: Wave[] = [];
   const rnd = rngFrom(def.seed * 31 + 7);
   // usable playable span before the boss gate; clamped so short stages still
   // get a few waves (the loop below scales to the stage length)
   const usable = Math.max(60, def.bossStart - 24);
-  // higher density => waves arrive more often. Short stages (stage 1's gate
-  // sits early, before the ravine) get tighter spacing so they still deliver a
-  // full set of encounters; long stages keep the original cadence.
+  // higher density => waves arrive more often. Stage 1's gate sits early
+  // (before the ravine), so spacing is tight enough to still deliver a full
+  // set of encounters.
   const spacing = Math.min(
     Math.max(28, Math.round(72 - def.density * 13)),
     Math.max(20, Math.round(usable * 0.28)),
@@ -283,39 +113,32 @@ export function buildWaves(def: StageDef): Wave[] {
     if (rnd() < 0.45) {
       entries.push({ kind: rnd.pick(def.enemyPool), count: 1 + Math.floor(rnd() * 2), from: 'left', delay: 0.6 });
     }
-    if (def.flyerPool.length > 0 && rnd() < 0.42) {
-      entries.push({ kind: rnd.pick(def.flyerPool), count: 1 + Math.floor(rnd() * 2), from: 'air', delay: 0.3 });
-    }
     if (rnd() < 0.3) {
-      // Stage 1 uses only enemy kinds that have an uploaded sprite (the
-      // red-commando column of players.png); geometric turret is excluded here
-      // for stage 1. Other stages keep their procedural turret. See
-      // docs/asset-manifest.md.
-      entries.push({ kind: def.id === 1 ? rnd.pick(def.enemyPool) : 'turret', count: 1, from: 'spot', delay: 0 });
+      // spot spawns only use kinds that have an uploaded sprite (the
+      // red-commando column of players.png); geometric turret is excluded.
+      // See docs/asset-manifest.md.
+      entries.push({ kind: rnd.pick(def.enemyPool), count: 1, from: 'spot', delay: 0 });
     }
     waves.push({ x: x * TILE, entries, done: false });
   }
 
-  // scripted mid-boss encounter (stage 1 uses a soldier - no uploaded mech art)
+  // scripted mid-boss encounter (a heavy soldier)
   waves.push({
     x: midX * TILE,
     entries: [
-      { kind: def.id === 1 ? 'heavy' : 'mech', count: 1, from: 'right', delay: 0 },
+      { kind: 'heavy', count: 1, from: 'right', delay: 0 },
       { kind: rnd.pick(def.enemyPool), count: 2, from: 'right', delay: 1.2 },
     ],
     done: false,
   });
 
-  // final defensive line in front of the boss gate (stage 1 uses a soldier -
-  // no uploaded turret/flyer art, so no geometric enemies spawn)
+  // final defensive line in front of the boss gate (soldiers only - no
+  // uploaded turret/flyer art, so no geometric enemies spawn)
   waves.push({
     x: (def.bossStart - 20) * TILE,
     entries: [
-      { kind: def.id === 1 ? 'shield' : 'turret', count: 1, from: 'spot', delay: 0 },
+      { kind: 'shield', count: 1, from: 'spot', delay: 0 },
       { kind: rnd.pick(def.enemyPool), count: 2, from: 'right', delay: 0.5 },
-      ...(def.flyerPool.length > 0
-        ? [{ kind: rnd.pick(def.flyerPool), count: 1, from: 'air' as const, delay: 1.0 }]
-        : []),
     ],
     done: false,
   });

@@ -6,6 +6,7 @@ import { audio } from '../src/audio/audio';
 import { isBlocking, T } from '../src/level/tiles';
 import { GROUND_ROW, LEVEL_ROWS, TILE } from '../src/config/constants';
 import { openBossDoor } from '../src/level/level';
+import { STAGE_COUNT } from '../src/level/stages';
 
 /** Controllable fake input implementing the small surface the scene reads. */
 class FakeInput {
@@ -114,7 +115,7 @@ function botStep(scene: GameScene, input: FakeInput): void {
 }
 
 describe('Phase 4: every authored stage is traversable spawn -> boss gate', () => {
-  for (let stage = 1; stage <= 8; stage++) {
+  for (let stage = 1; stage <= STAGE_COUNT; stage++) {
     it(`stage ${stage} bot reaches the boss gate`, () => {
       const input = new FakeInput();
       const { host } = makeHost(input);
@@ -148,7 +149,7 @@ describe('Phase 4: every authored stage is traversable spawn -> boss gate', () =
 });
 
 describe('Phase 4: boss arenas are flat across all stages', () => {
-  for (let stage = 1; stage <= 8; stage++) {
+  for (let stage = 1; stage <= STAGE_COUNT; stage++) {
     it(`stage ${stage} arena floor is level and gap-free (gate open)`, () => {
       const input = new FakeInput();
       const { host } = makeHost(input);

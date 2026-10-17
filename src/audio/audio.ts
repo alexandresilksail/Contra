@@ -41,7 +41,8 @@ const n = (step: number, deg: number, len = 1): Note => ({ step, deg, len });
 /** 8 original stage themes + 1 boss theme. Index 8 is the boss battle track. */
 export const TRACKS: Track[] = [
   {
-    // 1 Military base — driving march
+    // 1 Stage 1 - military base, driving march (ORIGINAL composition: the
+    //    original game's stage BGM is copyrighted and cannot be shipped)
     bpm: 148,
     root: 45,
     scale: [0, 3, 5, 7, 10],
@@ -52,86 +53,9 @@ export const TRACKS: Track[] = [
     bassWave: 'triangle',
   },
   {
-    // 2 Forest — tense, syncopated
-    bpm: 138,
-    root: 47,
-    scale: [0, 2, 3, 7, 9],
-    bass: [n(0, 0, 3), n(3, 0, 1), n(4, 2, 2), n(8, 3, 2), n(10, 1, 2), n(12, 0, 4)],
-    lead: [n(0, 4), n(2, 5), n(4, 6), n(6, 5), n(7, 4), n(9, 3), n(12, 5), n(14, 6)],
-    drums: 'k..hks.hk..hks.k',
-    leadWave: 'square',
-    bassWave: 'triangle',
-  },
-  {
-    // 3 Industrial — heavy mechanical
-    bpm: 158,
-    root: 41,
-    scale: [0, 1, 5, 7, 8],
-    bass: [n(0, 0, 2), n(2, 0, 2), n(4, 1, 2), n(6, 0, 1), n(8, 2, 2), n(12, 0, 4)],
-    lead: [n(0, 3), n(1, 4), n(3, 3), n(5, 6), n(7, 5), n(8, 4), n(11, 6), n(13, 5), n(15, 3)],
-    drums: 'kshhkshhkshhkshs',
-    leadWave: 'sawtooth',
-    bassWave: 'square',
-  },
-  {
-    // 4 Underground — dark, sparse
-    bpm: 126,
-    root: 38,
-    scale: [0, 2, 3, 5, 7, 10],
-    bass: [n(0, 0, 4), n(4, -2, 2), n(6, -1, 2), n(8, 0, 4), n(12, 1, 4)],
-    lead: [n(0, 4), n(4, 3), n(6, 5), n(8, 6), n(10, 5), n(12, 4), n(14, 3)],
-    drums: 'k...s...k..hs..k',
-    leadWave: 'triangle',
-    bassWave: 'sawtooth',
-  },
-  {
-    // 5 City battlefield — fast, urgent
-    bpm: 168,
-    root: 49,
-    scale: [0, 2, 3, 7, 8],
-    bass: [n(0, 0, 1), n(1, 0, 1), n(2, 2, 1), n(4, 0, 2), n(6, 3, 2), n(8, 0, 1), n(10, 2, 2), n(12, 1, 4)],
-    lead: [n(0, 5), n(2, 6), n(3, 5), n(5, 4), n(6, 5), n(8, 7), n(10, 6), n(12, 5), n(14, 4)],
-    drums: 'k.hks.hkk.hks.hh',
-    leadWave: 'square',
-    bassWave: 'square',
-  },
-  {
-    // 6 Snow mountains — cold, wide
-    bpm: 132,
-    root: 50,
-    scale: [0, 2, 4, 7, 9],
-    bass: [n(0, 0, 4), n(4, 3, 4), n(8, 2, 4), n(12, 4, 4)],
-    lead: [n(0, 6), n(3, 5), n(4, 4), n(7, 6), n(8, 7), n(11, 6), n(12, 5), n(15, 4)],
-    drums: 'k...h..sk...h.hs',
-    leadWave: 'triangle',
-    bassWave: 'triangle',
-  },
-  {
-    // 7 Alien facility — weird, dissonant
-    bpm: 150,
-    root: 44,
-    scale: [0, 1, 4, 6, 8, 11],
-    bass: [n(0, 0, 2), n(3, 1, 1), n(4, 0, 2), n(8, 3, 2), n(10, 2, 2), n(12, 0, 3)],
-    lead: [n(0, 5), n(2, 7), n(4, 6), n(5, 8), n(7, 7), n(9, 5), n(11, 9), n(13, 8), n(15, 6)],
-    drums: 'k.h.s.h.k.h.s.hh',
-    leadWave: 'sawtooth',
-    bassWave: 'sawtooth',
-  },
-  {
-    // 8 Final base — relentless finale
-    bpm: 176,
-    root: 40,
-    scale: [0, 1, 3, 5, 7, 8, 10],
-    bass: [n(0, 0, 1), n(1, 0, 1), n(2, 1, 1), n(3, 0, 1), n(4, 2, 2), n(6, 1, 2), n(8, 0, 1), n(9, 0, 1), n(10, 3, 2), n(12, 0, 4)],
-    lead: [n(0, 6), n(1, 5), n(2, 6), n(4, 8), n(6, 7), n(8, 6), n(9, 5), n(11, 8), n(12, 9), n(14, 8), n(15, 6)],
-    drums: 'kshkkshkskhkshsk',
-    leadWave: 'square',
-    bassWave: 'sawtooth',
-  },
-  {
-    // 9 Boss battle - tense, relentless minor march (ORIGINAL composition:
+    // 2 Boss battle - tense, relentless minor march (ORIGINAL composition:
     //    the original game's boss BGM is copyrighted and cannot be shipped).
-    //    Switched in by triggerBoss() for stages that define bossMusic.
+    //    Switched in by triggerBoss() for the stage-1 boss.
     bpm: 164,
     root: 40,
     scale: [0, 2, 3, 5, 7, 8, 10],
@@ -146,10 +70,7 @@ export const TRACKS: Track[] = [
 export const BOSS_TRACK = TRACKS.length - 1;
 
 /** Human-readable names for tests/docs. Index = TRACKS index. */
-export const TRACK_NAMES = [
-  'stage1-base', 'stage2-forest', 'stage3-industrial', 'stage4-underground',
-  'stage5-city', 'stage6-snow', 'stage7-alien', 'stage8-final', 'boss-battle',
-];
+export const TRACK_NAMES = ['stage1-base', 'boss-battle'];
 
 const midiToFreq = (m: number) => 440 * Math.pow(2, (m - 69) / 12);
 

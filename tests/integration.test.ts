@@ -4,6 +4,7 @@ import type { GameHost } from '../src/scenes/types';
 import { defaultSave } from '../src/core/save';
 import { audio } from '../src/audio/audio';
 import { ENEMY_DEFS } from '../src/entities/enemy';
+import { STAGE_COUNT } from '../src/level/stages';
 
 /** Controllable fake input implementing the small surface the scene reads. */
 class FakeInput {
@@ -55,7 +56,7 @@ function makeHost(input: FakeInput): { host: GameHost; log: string[] } {
 const FIXED = 1 / 60;
 
 describe('integration: every stage boots, spawns enemies and a boss, renders', () => {
-  for (let stage = 1; stage <= 8; stage++) {
+  for (let stage = 1; stage <= STAGE_COUNT; stage++) {
     it(`stage ${stage} runs enemy + boss simulation without throwing`, () => {
       const input = new FakeInput();
       const { host } = makeHost(input);
@@ -135,7 +136,7 @@ describe('integration: full boss kill and stage clear', () => {
     const input = new FakeInput();
     const { host, log } = makeHost(input);
     const scene = new GameScene(host);
-    scene.start({ stage: 3, chars: ['titan', 'razor'], twoPlayer: true, continueUsed: 0 });
+    scene.start({ stage: 1, chars: ['titan', 'razor'], twoPlayer: true, continueUsed: 0 });
 
     const ctx = makeCtx();
     input.rawState['F1'] = true; // enable debug so F4 works

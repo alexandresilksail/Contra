@@ -81,7 +81,6 @@ export class GameScene {
   private fpsAcc = 0;
   private fpsFrames = 0;
   private respawnT: number[] = [0, 0];
-  private scrollActive = false;
 
   constructor(host: GameHost) {
     this.host = host;
@@ -119,25 +118,6 @@ export class GameScene {
     this.theme = THEMES[this.def.theme] ?? THEMES.base;
     this.tileArt = buildTileArt(this.theme, this.def.seed);
     this.bg = buildBackground(this.theme, this.def.seed);
-    if (this.def.id === 1) {
-      // optional sprite-pack overrides for stage 1 (silently skipped when absent)
-      const pt = packStage1Tiles();
-      if (pt) {
-        this.tileArt.solid = pt.solid;
-        this.tileArt.platform = pt.platform;
-        this.tileArt.water = pt.water;
-      }
-      const pb = packStage1Bg();
-      if (pb) {
-        this.mapImageActive = true;
-        this.bg = {
-          sky: pb.sky,
-          // world-locked: speed 1 is implied by `lock`, and `y` is a WORLD
-          // coordinate (image row 0), not a screen coordinate
-          layers: [{ sprite: pb.sprite, speed: 1, repeat: true, y: pb.worldY, lock: true }],
-        };
-      }
-    }
     this.continueUsed = opt.continueUsed ?? 0;
 
     this.pbullets.clear();
@@ -151,7 +131,6 @@ export class GameScene {
     this.phaseT = 0;
     this.stageTime = 0;
     this.showStageT = 3.2;
-    this.scrollActive = false;
     this.respawnT = [0, 0];
 
     this.players = [];
@@ -161,9 +140,6 @@ export class GameScene {
       p.lives = START_LIVES;
       p.active = true;
       this.players.push(p);
-    }
-    if (this.host.save.settings.players === 2 && count === 1) {
-      // keep a slot so the HUD does not break
     }
 
     this.world.level = this.level;
@@ -178,6 +154,25 @@ export class GameScene {
     for (let i = 0; i < this.players.length; i++) {
       const p = this.players[i];
       p.place(startX + i * 18, this.findGroundY(startX + i * 18, p.h));
+    }
+
+    // optional sprite-pack overrides (silently skipped when absent): the
+    // uploaded Stage-1 tiles and the 1:1 world-locked map image.
+    const pt = packStage1Tiles();
+    if (pt) {
+      this.tileArt.solid = pt.solid;
+      this.tileArt.platform = pt.platform;
+      this.tileArt.water = pt.water;
+    }
+    const pb = packStage1Bg();
+    if (pb) {
+      this.mapImageActive = true;
+      this.bg = {
+        sky: pb.sky,
+        // world-locked: speed 1 is implied by `lock`, and `y` is a WORLD
+        // coordinate (image row 0), not a screen coordinate
+        layers: [{ sprite: pb.sprite, speed: 1, repeat: true, y: pb.worldY, lock: true }],
+      };
     }
 
     audio.playTrack(this.def.music);
@@ -253,9 +248,6 @@ export class GameScene {
       if ((p.state as string) === 'dead' && !wasDead) this.onPlayerDead(p, i);
     }
 
-    /* ---- forced scroll ---- */
-    this.updateForcedScroll(dt);
-
     /* ---- waves ---- */
     this.updateWaves();
 
@@ -302,30 +294,6 @@ export class GameScene {
       this.phaseT = 0;
       audio.stopTrack();
       audio.sfx('gameOver');
-    }
-  }
-
-  private updateForcedScroll(dt: number): void {
-    const s = this.def.scroll;
-    if (!s) return;
-    const [a, b, speed] = s;
-    const ax = a * TILE;
-    const bx = b * TILE;
-    const active = this.cam.x + VIEW_W > ax && this.cam.x < bx;
-    this.cam.forced = active;
-    this.cam.forcedSpeed = speed;
-    this.scrollActive = active;
-    if (!active) return;
-    void dt;
-    for (const p of this.players) {
-      if (!p.alive) continue;
-      const left = this.cam.x + 6;
-      if (p.x < left) {
-        p.x = left;
-        if (p.hurt(this.world, 1, p.x - 20)) continue;
-      }
-      const right = this.cam.x + VIEW_W - p.w - 6;
-      if (p.x > right) p.x = right;
     }
   }
 
@@ -455,7 +423,7 @@ export class GameScene {
   }
 
   private onBossDefeated(): void {
-    this.addScore(5000 * (this.def.id + 1), -1);
+    this.addScore(5000, -1);
     this.phase = 'clear';
     this.phaseT = 0;
     for (const p of this.players) {
@@ -464,10 +432,6 @@ export class GameScene {
     }
     audio.playTrack(this.def.music);
     audio.sfx('stageClear');
-    if (this.host.save.maxStageUnlocked < Math.min(8, this.def.id + 1)) {
-      this.host.save.maxStageUnlocked = Math.min(8, this.def.id + 1);
-      this.host.persist();
-    }
   }
 
   /* ------------------------------------------------------------------ */
@@ -882,7 +846,6 @@ export class GameScene {
       color: PAL.green,
       scale: 1,
     });
-    if (this.scrollActive) drawText(ctx, 'FORCED SCROLL', VIEW_W - 90, 30, { color: PAL.orange, scale: 1 });
   }
 
   /* called by the host when the player dies outside the update loop */

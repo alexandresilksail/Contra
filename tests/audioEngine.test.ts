@@ -340,10 +340,10 @@ describe('AudioEngine', () => {
   });
 
   describe('music scheduler', () => {
-    it('ships 8 stage themes + 1 boss theme, all original data', () => {
-      expect(TRACKS.length).toBe(9);
-      expect(TRACK_NAMES.length).toBe(9);
-      expect(BOSS_TRACK).toBe(8);
+    it('ships the stage-1 theme + 1 boss theme, all original data', () => {
+      expect(TRACKS.length).toBe(2);
+      expect(TRACK_NAMES.length).toBe(2);
+      expect(BOSS_TRACK).toBe(1);
       for (const t of TRACKS) {
         expect(t.bpm).toBeGreaterThan(60);
         expect(t.scale.length).toBeGreaterThan(2);
@@ -379,7 +379,7 @@ describe('AudioEngine', () => {
 
     it('pause keeps position; resume continues from it', () => {
       engine.init();
-      engine.playTrack(2);
+      engine.playTrack(BOSS_TRACK);
       tick(700);
       const paused = engine.musicStep;
       expect(paused).toBeGreaterThan(0);
@@ -389,7 +389,7 @@ describe('AudioEngine', () => {
       expect(engine.musicStep).toBe(paused);
       engine.resumeTrack();
       expect(engine.playing).toBe(true);
-      expect(engine.currentTrack).toBe(2);
+      expect(engine.currentTrack).toBe(BOSS_TRACK);
       tick(300);
       expect(engine.musicStep).not.toBe(paused);
     });
